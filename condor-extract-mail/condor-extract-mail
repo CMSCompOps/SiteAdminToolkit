@@ -1,0 +1,81 @@
+#!/usr/bin/python
+
+import tempfile
+import os
+import sys
+import re
+
+if len(sys.argv) != 2:
+    print "Usage: extract_email <name>"
+    sys.exit(1)
+
+user = sys.argv[1]
+
+cmd = 'condor_q -constraint \'RegExp("%s", x509userproxysubject)\' -format \'%%i\' ClusterId -format \'.%%i\\n\' ProcId' % user
+fd = os.popen(cmd)
+#print cmd
+output = fd.read()
+if fd.close():
+    print "condor_q returned non-zero."
+    sys.exit(2)
+
+sample_job = ''
+for line in output.splitlines():
+    sample_job = line.strip()
+if not sample_job:
+    print "condor_q returned no jobs running by user %s" % user
+    sys.exit(3)
+
+cmd = 'condor_q %s -format \'%%s\' x509userproxy' % sample_job
+#print cmd
+fd = os.popen(cmd)
+output = fd.read()
+if fd.close():
+    print "condor_q returned non-zero when querying for proxy filename."
+    sys.exit(4)
+
+filename = ''
+for line in output.splitlines():
+    filename = line.strip()
+if not filename:
+    print "condor_q returned no proxy filename for job %s." % sample_job
+#print filename
+
+begin_template = "-----BEGIN %s-----\n"
+end_template = "-----END %s-----\n"
+def query_attribute(cert, attribute):
+    cmd = "openssl x509 -noout -%s" % attribute
+    stdin, stdout = os.popen2(cmd)
+    stdin.write(begin_template % "CERTIFICATE")
+    stdin.write(cert)
+    stdin.write(end_template % "CERTIFICATE")
+    stdin.close()
+    output = stdout.read()
+    if stdout.close():
+        raise Exception()
+    return output.strip()
+
+def find_email(filename):
+    fd = open(filename, 'r')
+    x509_data = fd.read()
+    r = re.compile("\n?-+BEGIN ([A-Z\s]+)-+\n?([A-Za-z0-9+\n/=]+)-+END ([A-Z\s]+)-+", flags=re.MULTILINE)
+    splits = r.split(x509_data)
+    if not splits:
+        raise Exception("Unable to parse the proxy file")
+    certs = []
+    idx = 0
+    while idx < len(splits):
+        if splits[idx] == "CERTIFICATE" and idx + 2 < len(splits) and splits[idx+2] == "CERTIFICATE":
+            certs.append(splits[idx+1])
+            idx += 3
+        else:
+            idx += 1
+        
+    for cert in certs:
+        email = query_attribute(cert, "email")
+        if email:
+            print email
+            break
+
+find_email(filename)
+

@@ -1,0 +1,610 @@
+#!/usr/bin/python
+
+import getopt
+import getpass
+import os
+import string
+import subprocess
+import sys
+import libxml2
+
+class MappingError(Exception):
+    pass
+
+def logit(msg):
+    print msg
+
+def logerr(msg):
+    raise MappingError("ERROR: %s" % msg)
+
+def logdebug(msg):
+    if DEBUG:
+        logit("DEBUG: %s" % msg)
+
+def ask_continue(YALL=False):
+    if YALL:
+        return
+    check = True
+    while (check):
+        logit("")
+        ans = string.strip(raw_input("... continue with update? (y/n): "))
+        if ans != 'y' and ans != 'n':
+            print "You have to provide a y/n answer"
+            continue
+        if ans == 'n':
+            print "... BYE!"
+            sys.exit(1) 
+        if ans == 'y':
+            return
+
+def run_process(cmd, stdin_data=None):
+    stdoutdata = stderrdata = ""
+    exitStatus = 0
+    try:
+        # Tokenize the commandline that should be executed.
+        command_list = command_list = ['%s' % cmd,]
+        # launch process - Converted to using the subprocess module
+        process = subprocess.Popen(command_list, shell=True,
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   env=os.environ)
+        stdoutdata, stderrdata = process.communicate(input=stdin_data)
+        stdoutlist = stdoutdata.split("\n") # making a list
+        stdoutlist.remove('')  # sql also sends a blank like.. get rid of it
+        exitStatus = process.returncode
+    except OSError, e:
+        err_str = "Error running '%s'\nStdout:%s\nStderr:%s\nException OSError:%s"
+        raise RuntimeError, err_str % (cmd, stdoutdata, stderrdata, e)
+    #--- convert all fields to a list for each entry in the list --
+    newstdout = []
+    for line in stdoutlist:
+        newstdout.append(line.split("\t"))
+    return (newstdout,stderrdata,exitStatus)
+   
+
+def verify_root():
+    if getpass.getuser() != "root": 
+        logerr("You need to be root for this one")
+
+def verify_mysql_running(dbargs): 
+    if dbargs["host"] in ("localhost", os.uname()[1]):
+        cmd = "/sbin/service mysqld status"  # mysqld on same node
+    else:
+        cmd = "type mysql"  # looking for mysql client
+    (stdout,stderr,rtn) = run_process(cmd)
+    if rtn != 0:
+        if dbargs["host"] in (os.uname()[1]):
+            logerr("""The MySql mysqld daemon does not appear to be running
+  You will need it running. Tried: %s""" % cmd) 
+        else:
+            logerr("""Since the MySql database for GUMS is on another node (%s),
+a MySql client is required to access it and it does not appear to be installed.""" % os.uname()[1])
+
+def find_db_args(cfg):
+    dbargs = {}
+    if not os.path.isfile(cfg):
+        logerr("""The GUMS config file does not exist or is not readable: 
+%s""" % cfg)
+    doc = libxml2.parseFile(cfg)
+    elem = doc.xpathEval('//gums/persistenceFactories/hibernatePersistenceFactory')
+##    doc.freeDoc()
+    if len(elem) == 0:
+        logerr("""Cannot find a hibernatePersistenceFactory element in the 
+gums config file: %s""" % cfg)
+    if len(elem) > 1:
+        logerr("""Too many hibernatePersistenceFactory elements in the 
+gums config file: %s""" % cfg)
+    url = get_xml_attribute_value(elem[0],"hibernate.connection.url",cfg)
+    dbargs["host"]     = url.split(":")[2].split("/")[2]
+    dbargs["port"]     = url.split(":")[3].split("/")[0]
+    dbargs["database"] = url.split(":")[3].split("/")[1]
+    dbargs["username"] = get_xml_attribute_value(elem[0],"hibernate.connection.username",cfg)
+    dbargs["password"] = get_xml_attribute_value(elem[0],"hibernate.connection.password",cfg)
+    return dbargs
+
+def get_xml_attribute_value(elem,name,cfg):
+    attr = elem.xpathEval("attribute::%s" % name)
+    if len(attr) == 0:
+        logerr("Unable to find the %s attribute in the gums config file: %s" % (name,cfg))
+    return attr[0].content
+    
+
+def run_mysql(sql,cfg):
+    logdebug("""SQL statements: 
+%s""" % sql)
+    dbargs = find_db_args(cfg)
+    #-- write tmp password file
+    pswdfile = "/tmp/.%s" % os.getpid()
+    f = open(pswdfile, "w")
+    os.chmod(pswdfile, 0600 )
+    pswdini = """
+[client]
+password="%s"
+""" % dbargs["password"]
+    f.write(pswdini)
+    f.close()
+    #- runit
+    options = ""
+    cmd ="""mysql --defaults-extra-file=%(pswdfile)s --skip-column-names --unbuffered --user=%(username)s --host=%(host)s --port=%(port)s %(database)s""" % \
+       { "pswdfile" : pswdfile, 
+         "username" : dbargs["username"],
+         "host"     : dbargs["host"],
+         "port"     : dbargs["port"],
+         "database" : dbargs["database"], }
+    (stdout,stderr,rtn) = run_process(cmd, stdin_data=sql)
+    os.remove(pswdfile)
+    if rtn != 0:
+        logerr("""The mysql command failed:
+%(cmd)s
+STDIN: 
+%(stdin)s
+STDERR: 
+%(stderr)s""" % { "stdin" : sql, "cmd" : cmd, "stderr" : stderr }) 
+    logdebug("""SQL stdout: 
+%s""" % stdout)
+    return stdout
+
+def find_groups_for_dn(dn, cfg):
+    sql = "select GROUP_NAME, DN, FQAN, EMAIL from USERS where DN like '%s' order by DN,FQAN,GROUP_NAME;" % dn 
+    dn_list = run_mysql(sql, cfg)
+    if len(dn_list) == 0:
+        logit("This user is not found in any user group.")
+        return
+    logit("This user was found in %(nbr)s user groups:" %  { "nbr" : len(dn_list)})
+    logit("""%-15s %-28s %-20s %s""" % ("Group Name","FQAN","EMAIL","DN"))
+    logit("""%-15s %-28s %-20s %s""" % ("----------","--------","-----------","-----------------"))
+    saved_dn = dn_list[0][1]
+    for list in dn_list:
+        if saved_dn != list[1]:
+            logit("")
+        logit("""%-15s %-28s %-20s %s""" % (list[0], list[2], list[3], list[1]))
+        saved_dn = list[1]
+
+def  find_accts_for_dn(dn, cfg):
+    sql = "select ACCOUNT, MAP, DN from MAPPING where DN like '%s';" % dn 
+    acct_list = run_mysql(sql, cfg)
+    if len(acct_list) == 0:
+        logit("This user has not been mapped to any pool account")
+        return
+    logit("This user is mapped to %(nbr)s accounts:" %  { "nbr" : len(acct_list)})
+    logit("""%-12s %-10s %s""" % ("MAP","Account","DN"))
+    logit("""%-12s %-10s %s""" % ("----------","--------","-----------------"))
+    for acct in acct_list:
+        logit("""%-12s %-10s %s""" % (acct[1], acct[0], acct[2]))
+    logit("")
+
+def find_dns_for_acct(acct, cfg):
+    sql = "select DN,MAP from MAPPING where ACCOUNT = '%s';" % acct 
+    dn_list = run_mysql(sql,cfg)
+    if len(dn_list) == 0:
+        logerr("Pool account %s has not been allocated in any MAP account" % acct )
+    if len(dn_list) == 1 and dn_list[0][0] == "NULL":
+        logit("No users have been assigned this pool account: %s" % acct)
+        return
+    logit("There are %(nbr)s DNs for pool account %(acct)s:" %  { "acct" : acct, "nbr" : len(dn_list)})
+    logit("%-12s %s" % ("MAP","DN"))
+    logit("%-12s %s" % ("---------","---------"))
+    for dn in dn_list:
+        logit("%-12s %s" % (dn[1],dn[0]))
+    logit("")
+
+def remove_null_from_acct(acct, cfg):
+    sql = "select DN,MAP from MAPPING where ACCOUNT = '%s';" % acct 
+    dn_list = run_mysql(sql,cfg)
+    if len(dn_list) == 0:
+        logerr("Pool account %s has not been allocated in any MAP account" % acct )
+    if len(dn_list) == 1 and dn_list[0][0] == "NULL":
+        logerr("No users have been assigned this pool account: %s" % acct)
+        return
+    noNullFound = True
+    mapper = ""
+    for dn in dn_list:
+        if dn[0] == "NULL":
+            noNullFound = False
+            mapper = dn[1]
+            break
+    if noNullFound:
+        find_dns_for_acct(acct, cfg)
+        logerr("Did not find a NULL DN for this account: %s" % acct)
+    sql = """DELETE FROM MAPPING WHERE ACCOUNT = "%(acct)s" and MAP = "%(map)s" and DN IS NULL;""" % {"acct" : acct, "map" :  mapper }
+    logit("""SQL UPDATE:
+%s""" % sql)
+    stdout = run_mysql(sql, cfg) 
+    logit("... successfully deleted")
+    find_dns_for_acct(acct, cfg)
+
+def find_current_users_of_new_account(map, acct, cfg):
+    sql = "select ID,MAP,DN,ACCOUNT from MAPPING where ACCOUNT = '%s' and MAP = '%s';" % (acct, map)
+    dnlist = run_mysql(sql, cfg)
+    if len(dnlist) == 0:
+        logerr("Pool account (%s) has not been allocated in MAP account (%s)" % (acct,map))
+    return dnlist
+
+def find_users_current_mapping(map, dn, new_acct, cfg):
+    sql = "select ACCOUNT,MAP from MAPPING where DN = '%s' and MAP = '%s';" % (dn,map)
+    acct_list = run_mysql(sql, cfg)
+    if len(acct_list) == 0:
+        #print run_mysql("select ACCOUNT,MAP from MAPPING where ACCOUNT='cms0407' and MAP = '%s';" % (map), cfg)
+        logerr("This user is not mapped to any account")        
+    if len(acct_list) > 1:
+        logerr("""This user is currently mapped to multiple accounts. This needs to be corrected.""")
+    old_acct = acct_list[0]
+    if old_acct[0] == new_acct:
+        logerr("This user is already mapped to this account %s" % new_acct)
+    return acct_list
+
+def check_to_see_if_already_mapped(map, new_acct, old_acct, dn, new_dnlist):
+    logit("""
+Changing mapping in MAP %(map)s from %(old)s to %(new)s for 
+%(dn)s""" % { "dn" : dn, "old" : old_acct[0], "new" : new_acct, "map" : map})
+    ALREADY_MAPPED = False
+    logit("")
+##    if len(new_dnlist) == 1 and new_dnlist[0][2] != "NULL" and  dn != new_dnlist[0][2]:
+##        logerr("Someone else is already mapped to this account")
+    if len(new_dnlist) > 0 and new_dnlist[0][2] != "NULL":
+        logit("""Current users of account %s """ % new_acct)
+        logit("%-12s %s" % ("MAP", "DN"))
+        logit("%-12s %s" % ("---------", "---------"))
+        for new_dn in new_dnlist:
+            logit("%-12s %s" % (new_dn[1], new_dn[2]))
+            #--- check to see if already mapped to this account --
+            if new_dn[2] == dn:
+                ALREADY_MAPPED = True
+        logit("")
+        if ALREADY_MAPPED:
+            logerr("This user is already mapped to pool account %s" % new_acct)
+    else:
+        logit("""There are no current users for account %s""" % new_acct)
+
+def change_the_users_acct_mapping(map, new_acct, dn, old_acct, cfg):
+    sql = """\
+UPDATE MAPPING        SET ACCOUNT = "%(acct)s" where DN = "%(dn)s" and MAP = "%(map)s";
+DELETE FROM MAPPING WHERE ACCOUNT = "%(acct)s" and MAP = "%(map)s" and DN IS NULL;
+""" %  { "acct" : new_acct, "dn" : dn, "map" : map }
+    logit("""SQL UPDATE:
+%s""" % sql)
+    stdout = run_mysql(sql, cfg) 
+
+def create_null_dn_for_old_account(map, old_acct, cfg):
+    """ If the old account no longer exists, we need to insert a new MAPPING
+        row for that account with a NULL DN.
+    """
+    sql = """select count(*) from MAPPING where ACCOUNT = "%(acct)s" and MAP = "%(map)s";""" % { "acct" : old_acct[0], "map": map }
+    cnt = run_mysql(sql, cfg) 
+    if cnt[0][0] == '0':   # does not exist
+        logit("... re-allocating pool account (%s) in MAP (%s)" % (old_acct[0],map))
+        sql = """INSERT INTO MAPPING (MAP,ACCOUNT) VALUES("%(map)s","%(acct)s");
+""" %  { "acct" : old_acct[0], "map" : map }
+        logit("""SQL UPDATE:
+%s""" % sql)
+    stdout = run_mysql(sql, cfg) 
+
+# Bockjoo added
+def map_new_dn_to_acct(map, dn, acct, cfg):
+    #1 find_accts_for_dn(dn, cfg)
+    sql = "select ACCOUNT, MAP, DN from MAPPING where DN like '%s';" % dn 
+    #print "DEBUG map_new_dn_to_acct sql command ",sql
+    acct_list = run_mysql(sql, cfg)
+    if len(acct_list) != 0:
+        logerr("DN %s is already mapped to an account or accounts" % dn )
+    #print "DEBUG map_new_dn_to_acct acct_list has none"
+    #for acct in acct_list:
+    #    logit("""%-12s %-10s %s""" % (acct[1], acct[0], acct[2]))
+
+    #2 new_dnlist = find_current_users_of_new_account(map, new_acct, cfg)
+    #3 acct_list  = find_users_current_mapping(map, dn, new_acct, cfg)
+    #4 old_acct = acct_list[0]
+    #5 check_to_see_if_already_mapped(map, new_acct, old_acct, dn, new_dnlist)
+    #6 ask_continue()
+    #7 change_the_users_acct_mapping(map, new_acct, dn, old_acct, cfg)
+
+    sql = """\
+UPDATE MAPPING        SET DN = "%s" where ACCOUNT = "%s" and MAP = "%s";
+""" %  (dn, acct, map)
+    #print "DEBUG map_new_dn_to_acct acct_list sql command",sql
+    logit("""SQL UPDATE:%s""" % sql)
+    stdout = run_mysql(sql, cfg) 
+
+    #8 create_null_dn_for_old_account(map, old_acct, cfg)
+    #9 logit("... updates complete")
+    #10 verification_after_updates(old_acct[0], new_acct, dn, cfg)
+    logit("These are accounts for %s" % (dn))
+    find_accts_for_dn(dn, cfg)
+    logit("")
+    logit("These are DNs for %s" % (acct))
+    find_dns_for_acct(acct, cfg) 
+    logit("")
+
+def map_dn_to_acct(map, new_acct, dn, cfg):
+    find_accts_for_dn(dn, cfg)
+    #print "find_accts_for_dn ",dn, "executed new_acct ",new_acct
+    new_dnlist = find_current_users_of_new_account(map, new_acct, cfg)
+    #print "new_dnlist executed "
+    acct_list  = find_users_current_mapping(map, dn, new_acct, cfg)
+    #print "new_dnlist executed "
+    #print "acct_list ",acct_list
+    old_acct = acct_list[0]
+    check_to_see_if_already_mapped(map, new_acct, old_acct, dn, new_dnlist)
+    ask_continue()
+    change_the_users_acct_mapping(map, new_acct, dn, old_acct, cfg)
+    create_null_dn_for_old_account(map, old_acct, cfg)
+    logit("... updates complete")
+    verification_after_updates(old_acct[0], new_acct, dn, cfg)
+
+def unmap_dn(map, acct, dn, cfg):
+    find_accts_for_dn(dn, cfg)
+    new_dnlist = find_current_users_of_new_account(map, acct, cfg)
+    if len(new_dnlist) == 0:
+        logerr("This pool account has not been allocated.")
+    if new_dnlist[0][2] != dn:
+        logerr("This user is not mapped to this account")
+    ask_continue()
+    sql = """update MAPPING set DN = NULL where ACCOUNT = "%(acct)s" and MAP = "%(map)s";""" % { "acct" : acct, "map": map }
+    logit("""SQL UPDATE:
+%s""" % sql)
+    stdout = run_mysql(sql, cfg) 
+    logit("... updates complete")
+    dnlist = find_current_users_of_new_account(map, acct, cfg)
+    if len(dnlist) == 0:
+        logerr("System error: This account got de-allocated")
+    if dnlist[0][2] != "NULL":
+        logerr("System error: Reset of DN to NULL for this account did not occur.")
+    logit("Update appears successful")
+    find_dns_for_acct(acct, cfg)
+
+
+def verification_after_updates(old_acct, new_acct, dn, cfg):
+    logit("")
+    logit("These are the new mappings")
+    find_accts_for_dn(dn, cfg)
+    logit("")
+    find_dns_for_acct(old_acct, cfg) 
+    logit("")
+    find_dns_for_acct(new_acct, cfg) 
+    logit("")
+
+def analyze_gums(cfg):
+    analyze_multiple_entries_per_map(cfg)
+    analyze_allocated_and_available(cfg)
+    analyze_pool_account_availability(cfg)
+
+def analyze_allocated_and_available(cfg):
+    """ Checks for MAPPING records that would appear as allocated and
+        assigned.  This is wheree a MAPPING record exist with both a NULL
+        DN and a populated DN.
+    """
+    global PGM
+    sql = """select MAP, ACCOUNT, DN from MAPPING where DN IS NOT NULL and ACCOUNT in (select ACCOUNT from MAPPING where DN IS NULL)"""
+    stdout = run_mysql(sql, cfg)
+    logit("""
+-------------------------------------------------------
+--- Accounts both allocated and consumed - not good ---
+-------------------------------------------------------
+The following user pool accounts have records where the specified
+account appears to be mapped, yet also available for assignment (DN is NULL).
+""")
+    logit("""... be patient.. this next one takes a little longer""")
+    if len(stdout) == 0:  
+        logit("... this condition does not exist")
+        return
+    logit("")
+    logit("%-20s %10s %s" % ("MAP","Account","DN"))
+    logit("%-20s %10s %s" % ("--------","---------","--------------"))
+    saved_dn = stdout[0][2]
+    for line in stdout:
+        if saved_dn != line[2]:
+            logit("")
+        logit("%-20s %10s %s" % (line[0],line[1],line[2]))
+        logit("%-20s %10s %s" % (line[0],line[1],"NULL"))
+        saved_dn = line[2]
+    logit("")
+    logit("""To correct this condition, user the '--remove-null' option of this script.""")
+
+def analyze_pool_account_availability(cfg):
+    """ For each pool account group, show availability.
+    """
+    sql = """select MAP ,count(*) as Total ,count(if( DN is not NULL, 1, NULL))  as Consumed ,count(if( DN is NULL, 1, NULL))  as Available from MAPPING group by MAP"""
+    stdout = run_mysql(sql, cfg)
+    logit("""
+----------------------------------------
+-- Pool account MAP groups statistics --
+----------------------------------------
+""")
+    if len(stdout) == 0:
+        logit("""... there are no pool account groups""")
+        return
+    logit("")
+    logit("%-20s %10s %10s %10s" %("MAP","Allocated","Consumed","Available"))
+    logit("%-20s %10s %10s %10s" %("------","---------","--------","---------"))
+    for line in stdout:
+        logit("%-20s %10s %10s %10s" % (line[0],line[1],line[2],line[3]))
+
+def analyze_multiple_entries_per_map(cfg):
+    """ Checks to see if there are any users that have been assigned 
+        multiple accounts within the same MAP account group.
+    """
+    sql = """select b.MAP,b.DN,b.cnt from (select MAP ,DN ,count(ACCOUNT) as cnt from MAPPING where DN is not NULL group by MAP ,DN) b where b.cnt > 1"""
+    stdout = run_mysql(sql, cfg)
+    logit("""
+----------------------------------------------------------
+--- Users with multiple entries in a pool account MAP. ---
+----------------------------------------------------------
+You may want to run the --unmap-user option on some of these.
+This will free up pool accounts.
+Before doing so, you should determine which account this user is currently 
+being mapped to using the 'Map Grid Identity to Account' option on the UI.
+""")
+    if len(stdout) == 0:
+        logit("""There are no users with multiple entries in a MAP account""")
+        return
+    logit("%5s %-10s %s" %("Count","MAP","DN"))
+    logit("%5s %-10s %s" %("-----","-----","-------------------"))
+    for line in stdout:
+        logit("%4s  %-10s %s" %(line[2],line[0],line[1]))
+    #-- details --
+    sql = """select m.ID, m.MAP, m.DN, m.ACCOUNT from MAPPING m where (m.MAP, m.DN) in (select MAP, DN from (select MAP, DN ,count(ACCOUNT) as cnt from MAPPING where DN is not NULL group by MAP, DN ) b where b.cnt > 1) order by MAP,DN,ID,ACCOUNT"""
+    stdout = run_mysql(sql, cfg)
+    logit("")
+    logit( "%-10s %-10s %s" %("Account","MAP","DN"))
+    logit( "%-10s %-10s %s" %("-------","-----","-------------------"))
+    saved_dn = stdout[0][2]
+    for line in stdout:
+        if line[2] != saved_dn:
+            logit("")
+        logit( "%-10s %-10s %s" %(line[3],line[1],line[2]))
+        saved_dn = line[2]
+
+#### usage ###################################################
+def usage(): 
+    global PGM
+    print """
+ Usage: %(pgm)s [--debug] [--help] option 
+
+ --debug - Display the sql statements used in the process
+ --help  - Shows usage
+  
+ Options (only one can be used):
+    --analyze
+      Scans the GUMS database MAPPING tables for conditions that may need
+      looking into.
+
+    --find-user ACCOUNT 
+      Displays all user DNs assigned to the specified pool account.
+
+    --remove-null ACCOUNT
+      This can only be used to remove a MAPPING table record that has a user
+      assigned yet has an additional record indicating the account is
+      available to be mapped to (DN is NULL).
+ 
+    --find-acct "DN"
+      Displays the pool account for a specific DN. 
+      Be sure to quote the DN.
+ 
+    --find-groups "DN"
+      Displays the user groups for a specific DN. 
+      NOTE: This is not related to pool accounts.  It may be a useful
+            tool when trying to determine what VOMS groups a user 
+            belongs to.
+      Be sure to quote the DN.
+ 
+    --map-user "DN" --acct ACCOUNT --mapper MAP
+      Maps the DN specfied to the MAP/ACCOUNT specified.
+      Be sure to quote the DN.
+
+    --map-newdn-to-acct "DN" --acct ACCOUNT --mapper MAP
+      Maps a new DN to the MAP/ACCOUNT specified.
+      The DN must not exist in the DB yet.
+
+    --unmap-user "DN" --acct ACCOUNT --mapper MAP
+      Unmaps the DN specfied for the MAP/ACCOUNT specified.
+      This makes that account available again for that pool account MAP.
+      Be sure to quote the DN.
+""" % { "pgm" : PGM }
+
+#### MAIN ########################################################
+def main(argv):
+    global PGM
+    global DEBUG
+    global UPDATE
+    acct = None
+    dn   = None
+    map  = None
+    actions = []
+    PGM = argv[0]
+    DEBUG    = False  
+    NOUPDATE = True  
+    gumsConfig = "/etc/gums/gums.config"
+    try:
+        verify_root()
+        dbargs = find_db_args(gumsConfig)
+        verify_mysql_running(dbargs)
+        arglist = ["help", "debug", "update", "analyze", "find-groups=", 
+                  "find-user=", "find-acct=", "map-user=", "map-newdn-to-acct=","unmap-user=", 
+                  "acct=", "mapper=", "remove-null=" ]
+        opts, args = getopt.getopt(argv[1:], "", arglist)
+        if len(opts) == 0:
+            usage()
+            logerr("No command line arguments specified")
+            return 1
+        for o, a in opts:
+            if o in ("--help"):
+                usage()
+                return 1
+            if o in ("--debug"):
+                DEBUG = True
+                continue
+            if o in ("--update"):
+                NOUPDATE = False
+                continue
+            if o in ("--analyze"):
+                actions.append(o)
+            if o in ("--find-user", "--remove-null"):
+                acct = a
+                actions.append(o)
+            if o in ("--map-user","--map-newdn-to-acct","--unmap-user","--find-acct", "--find-groups"):
+                dn = a
+                actions.append(o)
+            if o in ("--acct"):
+                acct = a
+            if o in ("--mapper"):
+                map = a
+        if len(actions) > 1:
+            usage()
+            logerr("""You have specified too many options %s. 
+Only one allowed. Make up your mind.
+""" % actions)
+        action = actions[0] 
+        if action in ["--analyze"]:
+            analyze_gums(gumsConfig)
+            return 0
+        if action in ("--map-user","--unmap-user","--map-newdn-to-acct"):
+            if map == None:
+                usage()
+                logerr("--mapper argument is required")
+            if acct == None:
+                usage()
+                logerr("--acct argument is required")
+            if action == "--map-user":
+                map_dn_to_acct(map, acct, dn, gumsConfig)
+            if action == "--map-newdn-to-acct":
+                map_new_dn_to_acct(map, dn, acct, gumsConfig)
+            if action == "--unmap-user":
+                unmap_dn(map, acct, dn, gumsConfig)
+            return 0
+        if action in ("--find-user","--remove-null"):
+            if acct == None or len(acct) == 0:
+                usage()
+                logerr("The ACCOUNT value is required")
+            if action == "--find-user":
+                find_dns_for_acct(acct, gumsConfig) 
+                return 0
+            if action == "--remove-null":
+                remove_null_from_acct(acct, gumsConfig) 
+                return 0
+        if action in ("--find-acct","--find-groups"):
+            if dn == None:
+                usage()
+                logerr("The DN value not provided.  Also remember to QUOTE it!!!")
+            if action == "--find-acct":
+                find_accts_for_dn(dn, gumsConfig)
+                return 0
+            if action == "--find-groups":
+                find_groups_for_dn(dn, gumsConfig)
+                return 0
+        usage()
+        logerr("Are you missing the --map-user argument?")
+    except getopt.GetoptError, e:
+        usage()
+        logit("ERROR: %s" % e)
+        return 1
+    except MappingError,e:
+        logit(e)
+        return 1
+        
+    return 0
+
+####################################
+if __name__ == "__main__":
+  sys.exit(main(sys.argv))
+

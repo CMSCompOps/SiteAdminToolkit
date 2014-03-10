@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Create this machine's archive directory, if it doesn't exist :
+if [ ! -d /mnt/hadoop/store/admin/logs/hadoop/$HOSTNAME/ ] ; then
+        mkdir /mnt/hadoop/store/admin/logs/hadoop/$HOSTNAME/
+fi
+
+# Actually archive the logs there :
+for log in $(find /var/log/hadoop/ -name \*log* -mtime +5) ; do
+        gzip --best $log
+        mv $log.gz /mnt/hadoop/store/admin/logs/hadoop/$HOSTNAME/
+done
+

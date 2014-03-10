@@ -1,0 +1,28 @@
+What the script does is ask DashBoard about ALL failed jobs in the last X hours, and compile a distribution of the job failures. 
+If any node has considerably more failures (default threshold = 10%, configurable in the script) it will be reported as bad and might be worth to investigate.
+
+So 2 parameters to think about changing is OffSet hours and failure rate threshold.
+
+Currently to keep it simple there is no "midnight treatment". You definitely want that "date" - "offset" >= midnight.
+
+This is supposed to be as simple as an HTTP query to CMS DashBoard and JSON parsing to produce the results in the example.
+
+Make sure to edit the script and set your site name. Tiradani's patch introduces some improvements here. To be commited soon.
+
+After configuring your site name run :
+
+[samir@localhost dashboard-blackhole-node]$ ./error-report.py 
+
+compute-22-32.tier2 had 2 failures
+compute-31-3.tier2 had 6 failures
+compute-22-13.tier2 had 2 failures
+compute-22-35.tier2 had 128 failures
+=================================
+average failure rate is 34
+Total failures: 138
+=================================
+node compute-22-35.tier2 is bad with 0.927536 failures
+
+For any questions please contact :
+
+samir@hep.caltech.edu
