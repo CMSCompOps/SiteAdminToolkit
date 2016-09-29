@@ -32,9 +32,9 @@ def get_unmerged_location():
 
     host = socket.gethostname()
 
-    for check in unmerged_pfn_map.keys():
+    for check, item in unmerged_pfn_map.iteritems():
         if check in host:
-            return unmerged_pfn_map[check]
+            return item
 
     print 'Cannot determine location of unmerged directory from hostname.'
     print 'Please edit the function get_unmerged_location().'
@@ -52,14 +52,16 @@ def get_protected():
     conn = httplib.HTTPSConnection(url)
 
     try:
-        r1 = conn.request('GET', '/cmst2/unified/listProtectedLFN.txt')
-        r2 = conn.getresponse()
-        result = json.loads(r2.read())
-    except:
+        conn.request('GET', '/cmst2/unified/listProtectedLFN.txt')
+        res = conn.getresponse()
+        result = json.loads(res.read())
+    except TypeError:
         print 'Cannot read Protected LFNs. Have to stop...'
         exit(1)
 
     protected = result['protected']
+
+    conn.close()
 
     return protected
 
@@ -70,9 +72,10 @@ def get_unmerged_files():
     :rtype: list
     """
 
-    findCMD = 'find {0} -type f -ctime +14 -print'.format(get_unmerged_location())
-    out = subprocess.Popen(findCMD, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    (stdout, stderr) = out.communicate()
+    find_cmd = 'find {0} -type f -ctime +14 -print'.format(get_unmerged_location())
+    out = subprocess.Popen(find_cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, _ = out.communicate()
     return stdout.decode().split()
 
     # Testing
@@ -98,8 +101,9 @@ def do_delete(pfn):
 
        Needs to be implimented
 
-    :param str pfn: the PFN of the file to delete    
+    :param str pfn: the PFN of the file to delete
     """
+
     print 'Would delete %s' % pfn
 
 
@@ -115,17 +119,24 @@ def filter_protected(unmerged_files, protected):
     print 'Have %i protcted dirs' % len(protected)
     n_protect = 0
     n_delete = 0
-    for file in unmerged_files:
+    for unmerged_file in unmerged_files:
         # print 'Checking file %s' %file
         protect = False
+
         for lfn in protected:
             pfn = lfn2pfn(lfn)
-            if pfn in file:
-                print '%s is protected by path %s' % (file, pfn)
+            if pfn in unmerged_file:
+                print '%s is protected by path %s' % (unmerged_file, pfn)
                 protect = True
                 break
+
         if not protect:
-            do_delete(file)
+            do_delete(unmerged_file)
+            n_delete += 1
+        else:
+            n_protect += 1
+
+    print 'Number deleted: %i,\nNumber protected: %i' % (n_delete, n_protect)
 
 
 if __name__ == '__main__':

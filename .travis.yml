@@ -1,0 +1,6 @@
+language: python
+python: 2.7
+# once merged, change this back to
+# install: git clone https://github.com/CMSCompOps/OpsSpace.git
+install: git clone https://github.com/dabercro/OpsSpace.git
+script: OpsSpace/test/package_test.sh
