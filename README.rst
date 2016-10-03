@@ -1,6 +1,8 @@
 Site Admin Toolkit
 ==================
 
+|build|
+
 This package contains tools for Site Admins to maintain their site.
 
 .. note::
@@ -29,3 +31,6 @@ dabercro: |build-dabercro|
 
 .. |build-dabercro| image:: https://travis-ci.org/dabercro/SiteAdminToolkit.svg?branch=master
     :target: https://travis-ci.org/dabercro/SiteAdminToolkit
+
+.. |build| image:: https://travis-ci.org/CMSCompOps/SiteAdminToolkit.svg?branch=master
+    :target: https://travis-ci.org/CMSCompOps/SiteAdminToolkit
