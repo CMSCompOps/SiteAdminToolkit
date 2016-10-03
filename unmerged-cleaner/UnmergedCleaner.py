@@ -1,9 +1,14 @@
+#! /usr/bin/env python
+
 """
 This script is located as ``SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py``.
 It is used to clean up unmerged files, leaving protected directories alone.
 In order to use the script at your site, make sure the
 :py:func:`get_unmerged_location` returns the correct location,
 based on your node's hostname.
+To check this quickly, run the following from ``SiteAdminToolkit/unmerged-cleaner``::
+
+    python -c 'import UnmergedCleaner; print UnmergedCleaner.get_unmerged_location()'
 
 :author: Chistoph Wissing <christoph.wissing@desy.de>
 """
