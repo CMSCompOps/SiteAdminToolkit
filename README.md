@@ -1,3 +1,3 @@
 # SiteAdminToolkit
 
-I addeed the readme.
+Tool collections useful for SiteAdmins.
