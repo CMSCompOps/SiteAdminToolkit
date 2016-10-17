@@ -60,7 +60,7 @@ def get_protected():
         conn.request('GET', '/cmst2/unified/listProtectedLFN.txt')
         res = conn.getresponse()
         result = json.loads(res.read())
-    except TypeError:
+    except Exception:
         print 'Cannot read Protected LFNs. Have to stop...'
         exit(1)
 

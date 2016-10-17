@@ -49,7 +49,20 @@ opsdir=${testdir%%"/SiteAdminToolkit/test"}
 cd $opsdir
 
 # Define configuration for pylint
-pylintCall="pylint --rcfile test/pylint.cfg"
+cfg26=test/pylint_py2.6.cfg
+cfg27=test/pylint.cfg
+
+if [ $(pylint --version 2> /dev/null | grep pylint | awk '{ print $2 }') = "1.3.1," ]
+then
+
+    sed 's/load-plugins=/#/g' $cfg27 > $cfg26
+    pylintCall="pylint --rcfile $cfg26"
+
+else
+
+    pylintCall="pylint --rcfile $cfg27"
+
+fi
 
 # Cherrypy requires some things to be ignored for the class and cherrypy object
 $pylintCall SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py > $outputdir/unmergedcleaner.txt
