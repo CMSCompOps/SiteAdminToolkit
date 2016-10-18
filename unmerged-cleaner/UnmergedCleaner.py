@@ -29,15 +29,18 @@ def unmerged_from_phedex(site_name):
     :rtype: str
     """
 
-    conn = httplib.HTTPSConnection('cmsweb.cern.ch',
-                                   context=ssl._create_unverified_context())
+    try:
+        conn = httplib.HTTPSConnection('cmsweb.cern.ch',
+                                       context=ssl._create_unverified_context())
+    except AttributeError:
+        conn = httplib.HTTPSConnection('cmsweb.cern.ch')
 
     try:
-        conn.request('GET', 
+        conn.request('GET',
                      '/phedex/datasvc/json/prod/lfn2pfn?'
                      'node=%s&protocol=direct&lfn=/store/unmerged/' %
                      site_name)
-                     
+
         res = conn.getresponse()
         result = json.loads(res.read())
     except Exception:
@@ -49,7 +52,7 @@ def unmerged_from_phedex(site_name):
     conn.close()
 
     return location
-    
+
 
 def get_unmerged_location():
     """

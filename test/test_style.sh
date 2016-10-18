@@ -65,7 +65,8 @@ else
 fi
 
 # Cherrypy requires some things to be ignored for the class and cherrypy object
-$pylintCall SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py > $outputdir/unmergedcleaner.txt
+$pylintCall --disable=protected-access SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py \
+    > $outputdir/unmergedcleaner.txt
 
 # Check the output
 cd $testdir
