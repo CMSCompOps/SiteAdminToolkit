@@ -17,12 +17,44 @@ import httplib
 import subprocess
 import json
 import socket
+import ssl
 
+
+def unmerged_from_phedex(site_name):
+    """
+    Get the unmerged folder location from Phedex.
+
+    :param str site_name: is the name of the site to check
+    :returns: lfn of the unmerged folder
+    :rtype: str
+    """
+
+    conn = httplib.HTTPSConnection('cmsweb.cern.ch',
+                                   context=ssl._create_unverified_context())
+
+    try:
+        conn.request('GET', 
+                     '/phedex/datasvc/json/prod/lfn2pfn?'
+                     'node=%s&protocol=direct&lfn=/store/unmerged/' %
+                     site_name)
+                     
+        res = conn.getresponse()
+        result = json.loads(res.read())
+    except Exception:
+        print 'Failed to get LFNs from Phedex...'
+        exit(1)
+
+    location = result['phedex']['mapping'][0]['pfn']
+
+    conn.close()
+
+    return location
+    
 
 def get_unmerged_location():
     """
-    Each site admin should ensure that this function returns the correct
-    location of their unmerged directory.
+    Each site admin should ensure that this function returns the
+    correct location of their unmerged directory.
     The easiest way to do this is to add to the dictionary in the function,
     which gives the unmerged location if the key matches part of the hostname.
 
@@ -30,16 +62,32 @@ def get_unmerged_location():
     :rtype: str
     """
 
-    unmerged_pfn_map = {
-        'desy.de': '/pnfs/desy.de/cms/tier2/unmerged',
-        'mit.edu': '/mnt/hadoop/cms/store/unmerged',
-        }
-
     host = socket.gethostname()
+
+    # Try mapping directly the domain to the LFN
+
+    unmerged_pfn_map = {
+        'desy.de': unmerged_from_phedex('T2_DE_DESY'),
+        'mit.edu': unmerged_from_phedex('T2_US_MIT'),
+        }
 
     for check, item in unmerged_pfn_map.iteritems():
         if check in host:
             return item
+
+    # Fall back to trying to match patterns of all site names
+
+    try:
+        import CMSToolBox.sitereadiness
+
+        for site in CMSToolBox.sitereadiness.site_list():
+            if site.split('_')[2].lower() in host:
+                return unmerged_from_phedex(site)
+
+    except ImportError:
+        print 'CMSToolBox not installed...'
+
+    # Cannot find a possible unmerged location
 
     print 'Cannot determine location of unmerged directory from hostname.'
     print 'Please edit the function get_unmerged_location().'
