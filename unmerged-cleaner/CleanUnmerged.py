@@ -10,26 +10,31 @@ leave to site admins to correctly remove those directories. For Hadoop users
 we provide a script that will do such removal as I(Max) do it on MIT cluster.
 :author: Chistoph Wissing + Dan Abercrombi + Max Goncharov
 """
-import os, sys, re, glob, time
+import os, sys, re, glob, time, subprocess, signal
 import httplib
 import simplejson as json
 
 #define your storage, configurable
 myStorage = 'Hadoop'
-#define the full pathename for your system, configurable
-fullStub = '/mnt/hadoop/cms'
+#define the name of your site, configurable
+mySite = 'T2_US_MIT'
 #where you want directories that can be deleted written, configurable
 fileName = '/root/files2delete.txt'
 #directories to exclude from consideration, configurable
-dirsToAvoid = ['SAM','log']
+dirsToAvoid = ['SAM','logs']
 #minimum time interval when we can start deleting(one week now)
 minTimeWindow = 60*60*24*7
 
-moreStub = '/store/unmerged'
+pfnPath = None
+lfnPath = None
 protectedList = []
 nameLength = []
-
 nowTime = int(time.time())
+
+class Alarm(Exception):
+    pass
+def alarm_handler(signum, frame):
+    raise Alarm
 
 class DataNode:
     def __init__(self,pathName):
@@ -42,14 +47,15 @@ class DataNode:
 	self.size = 0
 
     def Fill(self):
-	if bi_search(nameLength,len(self.pathName)):
-	    if bi_search(protectedList, self.pathName):
+	lfnPathName = lfnPath + self.pathName
+	if bi_search(nameLength,len(lfnPathName)):
+	    if bi_search(protectedList, lfnPathName):
 	        self.canVanish = False
 	        return
 
 	#here we invoke method that might not work on all 
 	#storage systems
-	fullPathName = fullStub + self.pathName
+	fullPathName = pfnPath + self.pathName
 	dirs = listFolder(fullPathName,'subdirs')
 	allFiles = listFolder(fullPathName,'files')
 	for subdir in dirs:
@@ -109,6 +115,34 @@ def get_protected():
     uniqList = list(set(protected))
     return uniqList
 
+def get_lfn(siteName):
+    webServer = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/'
+    args = 'lfn2pfn?node=' + siteName + '&protocol=direct&lfn=/store/unmerged/'
+
+    url = '"'+webServer+args+'"'
+    cmd = 'curl -k -H "Accept: text/xml" ' + url
+
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               bufsize=4096,shell=True)
+
+    signal.signal(signal.SIGALRM, alarm_handler)
+    signal.alarm(5*60)  # 5 minutes
+    try:
+        strout, error = process.communicate()
+        signal.alarm(0)
+    except Alarm:
+        print " Oops, taking too long!"
+        raise Exception(" FATAL -- Call to PhEDEx timed out, stopping")
+        if process.returncode != 0:
+            print " Received non-zero exit status: " + str(process.returncode)
+            raise Exception(" FATAL -- Call to PhEDEx failed, stopping")
+
+    dataJson = json.loads(strout)
+    pfn = dataJson["phedex"]["mapping"][0]["pfn"]
+    lfn = dataJson["phedex"]["mapping"][0]["lfn"]
+    del dataJson
+    return (pfn, lfn)
+
 def bi_search(thelist, item):
     if len(thelist) == 0:
         return False
@@ -153,7 +187,6 @@ def getMtimeHadoop(name):
     return int(os.stat(name).st_mtime)
 
 def getFileSizeHadoop(name):
-   #convert to MBs
    return int(os.stat(name).st_size)
 
 #get a list of protected directories
@@ -166,6 +199,8 @@ for item in protectedList:
     allLength.append(len(item))
 nameLength = list(set(allLength))    
 
+pfnPath, lfnPath = get_lfn(mySite)
+
 #list all subdirs in the top directory
 #then build a tree for each subnode, avoid logs
 #now build a directory tree of directories to delete
@@ -173,17 +208,13 @@ print "Some statistics about what is going to be deleted"
 print "# Folders  Total    Total  DiskSize  FolderName"
 print "#          Folders  Files  [GB]                "
 
-dirs = listFolder(fullStub + moreStub,'subdirs')
+dirs = listFolder(pfnPath,'subdirs')
 dirsToDelete = []
 for subdir in dirs:
-    skip = False
-    for item in dirsToAvoid:
-        if item in subdir:
-	    skip = True
-	    break
-    if skip:
-	continue
-    topNode = DataNode(moreStub + '/' + subdir)
+    if subdir in dirsToAvoid:
+        continue
+
+    topNode = DataNode(subdir)
     topNode.Fill()
 
     list2del = []
@@ -204,5 +235,9 @@ for subdir in dirs:
 
 del_file = open(fileName, 'w')
 for item in dirsToDelete:
-	del_file.write(item.pathName+'\n')
+	del_file.write(lfnPath + item.pathName+'\n')
 del_file.close()
+
+
+
+
