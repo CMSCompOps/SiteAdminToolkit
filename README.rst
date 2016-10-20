@@ -21,6 +21,12 @@ UnmergedCleaner.py
 .. automodule:: UnmergedCleaner
    :members:
 
+CleanUnmerged.py
+~~~~~~~~~~~~~~~~~~
+
+.. automodule:: CleanUnmerged
+   :members:
+
 SiteAdminToolkit Forks' Build Statuses
 --------------------------------------
 
