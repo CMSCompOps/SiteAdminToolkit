@@ -1,3 +1,4 @@
 *~
 *.pyc
 test/*/*
+unmerged-cleaner/config.py
