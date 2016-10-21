@@ -42,7 +42,17 @@ except ImportError:
 
 
 class DataNode(object):
+    """
+    An object that holds other DataNodes inside of it.
+    If a single DataNode is removable, then all nodes under it are removable too.
+    Removability is determined by the list of protected directories and the directory age.
+    """
+
     def __init__(self, path_name):
+        """
+        Initializes the DataNode.
+        :param str path_name: is the path to the directory that defines this DataNode
+        """
         self.path_name = path_name
         self.sub_nodes = []
         self.can_vanish = None
@@ -52,8 +62,14 @@ class DataNode(object):
         self.size = 0
 
     def fill(self):
+        """
+        Fills this DataNode's sub_node member with all DataNodes made by subdirectories.
+        Recursively builds the full tree.
+        """
+
         lfn_path_name = os.path.join(ConfigTools.LFN, self.path_name)
 
+        # If protected, cannot delete this DataNode, and stop filling
         if bi_search(ALL_LENGTHS, len(lfn_path_name)) and \
                 bi_search(PROTECTED_LIST, lfn_path_name):
             self.can_vanish = False
@@ -86,7 +102,7 @@ class DataNode(object):
                 if not sub_node.can_vanish:
                     self.can_vanish = False
                 if sub_node.latest > self.latest:
-                    self.lastest = sub_node.latest
+                    self.latest = sub_node.latest
 
             self.nsubfiles = self.nsubfiles + len(all_files)
 
@@ -98,11 +114,19 @@ class DataNode(object):
 
 
     def traverse_tree(self, list_to_del):
+        """
+        Searches the tree for directories that can be deleted
+        and appends them to a list of directories to delete.
+
+        :para list list_to_del: is a list of directories that
+                                can be deleted by a cleaner.
+        """
+
         if self.can_vanish:
             list_to_del.append(self)
-            return
-        for sub_node in self.sub_nodes:
-            sub_node.traverse_tree(list_to_del)
+        else:
+            for sub_node in self.sub_nodes:
+                sub_node.traverse_tree(list_to_del)
 
 
 def bi_search(thelist, item):
@@ -128,6 +152,10 @@ def list_folder(name, opt):
     """
     Lists the directories or files in a parent directory.
 
+    .. Note::
+
+       This can potentially be optimized for different filesystems.
+
     :param str name: is the name of the directory to list.
     :param str opt: determines what to list inside the directory.
                     If 'subdirs', then only directories are listed.
@@ -149,10 +177,34 @@ def list_folder(name, opt):
 
 
 def get_mtime(name):
+    """
+    Get the modification time for a directory or file.
+
+    .. Note::
+
+       This can potentially be optimized for different filesystems.
+
+    :param str name: Name of directory or file
+    :returns: Modification time
+    :rtype: int
+    """
+
     return int(os.stat(name).st_mtime)
 
 
 def get_file_size(name):
+    """
+    Get the site of a file.
+
+    .. Note::
+
+       This can potentially be optimized for different filesystems.
+
+    :param str name: Name of file
+    :returns: File size, in bytes
+    :rtype: int
+    """
+
     return int(os.stat(name).st_size)
 
 

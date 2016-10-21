@@ -65,7 +65,7 @@ else
 fi
 
 # Cherrypy requires some things to be ignored for the class and cherrypy object
-$pylintCall --disable=protected-access,unexpected-keyword-arg \
+$pylintCall --disable=protected-access,unexpected-keyword-arg,redefined-builtin \
     SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py > $outputdir/unmergedcleaner.txt
 
 # Check the output
