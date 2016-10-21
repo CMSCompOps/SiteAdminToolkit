@@ -139,11 +139,21 @@ def list_folder(name, opt):
 
     # This is where the call is made depending on what
     # file system the site is running, should add more as we go on
-    _, dirs, files = os.walk(name).next()
+    inside = os.listdir(name)
     if opt == 'subdirs':
-        return dirs
+        # Return list of directories
+        return filter(os.path.isdir, inside)
     else:
-        return files
+        # Return list of files
+        return filter(os.path.isfile, inside)
+
+
+def get_mtime(name):
+    return int(os.stat(name).st_mtime)
+
+
+def get_file_size(name):
+    return int(os.stat(name).st_size)
 
 
 def get_protected():
@@ -167,14 +177,6 @@ def get_protected():
     conn.close()
 
     return protected
-
-
-def get_mtime(name):
-    return int(os.stat(name).st_mtime)
-
-
-def get_file_size(name):
-    return int(os.stat(name).st_size)
 
 
 def main():
