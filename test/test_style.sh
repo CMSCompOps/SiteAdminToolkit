@@ -66,7 +66,7 @@ fi
 
 # Ignore certain errors that you are aware of for each script individually
 $pylintCall --disable=protected-access,unexpected-keyword-arg,redefined-builtin,import-error \
-    SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py > $outputdir/unmergedcleaner.txt
+    SiteAdminToolkit/unmerged-cleaner/ListDeletable.py > $outputdir/listdeletable.txt
 
 $pylintCall --disable=protected-access,unexpected-keyword-arg \
     SiteAdminToolkit/unmerged-cleaner/ConfigTools.py > $outputdir/configtools.txt

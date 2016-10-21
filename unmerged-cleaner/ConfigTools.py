@@ -15,6 +15,9 @@ import json
 
 
 LFN = '/store/unmerged/'
+"""
+The LFN of the folder that the Unmerged Cleaner tool cleans.
+"""
 
 
 def unmerged_from_phedex(site_name):
@@ -24,7 +27,7 @@ def unmerged_from_phedex(site_name):
     If the site is given as 'test', the PFN returned will be
     two directories up from the script.
     If installed in the OpsSpace repository, this will land
-    in the OpsSpace roo.
+    in the OpsSpace root.
 
     :param str site_name: is the name of the site to check
     :returns: PFN of the unmerged folder
@@ -66,9 +69,7 @@ def unmerged_from_phedex(site_name):
 
 def guess_site():
     """
-    Guesses the site that the script is at based on the hostname.
-
-    :returns: Guessed site name for this site
+    :returns: Guessed site name for current location based on hostname
     :rtype: str
     """
 
@@ -112,14 +113,17 @@ DOCS = {
                   'The only thing this affects is the location of the unmerged directory,\n'
                   'which can be overwritten directly.'),
     'UNMERGED_DIR_LOCATION': ('The location of the unmerged directory.\n'
-                              'Can either be retrieved from Phedex or given explicitly.'),
+                              'Can either be retrieved from Phedex (default) or given explicitly.'),
     'STORAGE_TYPE': ('This defines the storage type of the site.\n'
                      'This will be useful if there are future optimizations,\n'
-                     'but is currently not used.'),
-    'DELETION_FILE': ('The list of directories to delete are placed in a file at this location.'),
-    'DIRS_TO_AVOID': ('This is a list of directories immediately inside unmerged to leave alone.'),
+                     'but is currently not used.\n'
+                     'The default is ``\'%s\'``' % DEFAULTS['STORAGE_TYPE']),
+    'DELETION_FILE': ('The list of directories to delete are placed in a file at this location.\n'
+                      'The default is ``\'%s\'``' % DEFAULTS['DELETION_FILE']),
+    'DIRS_TO_AVOID': ('This is a list of directories immediately inside unmerged to leave alone.\n'
+                      'The defaults are ``%s``' % DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE': ('Any directories with an age less than this, in seconds, will not be deleted.\n'
-                'The default corresponds to one week.')
+                'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE'])
 }
 
 VAR_ORDER = [
@@ -131,12 +135,13 @@ VAR_ORDER = [
     'STORAGE_TYPE',
     ]
 
+
 def get_default(key):
     """
     :param str key: This can be any of the keys in DEFAULTS in addition to
                     SITE_NAME and UNMERGED_DIR_LOCATION
-    :returns: a string for the default configuration.
-    :rtype: function
+    :returns: a string to write to the default configuration module.
+    :rtype: str
     """
 
     if key == 'SITE_NAME':
@@ -153,8 +158,9 @@ def get_default(key):
 
 def generate_default_config():
     """
-    This generates the file config.py.
-    Site admins should check this configuration and
+    This generates the file ``config.py``, if it does not exist.
+    Site admins should check this configuration and change to their desired
+    values before running ``ListDeletable.py`` a second time.
     """
 
     if os.path.exists('config.py'):

@@ -4,6 +4,18 @@
 # $Id$
 #
 
+##!
+# This script, located in ``SiteAdminTools/unmerged-cleaner/HadoopDelete.pl``,
+# is used to delete files and directories inside of a list of directories.
+# In particular, it is used on the Hadoop site T2_US_MIT.
+#
+# Before running it at your site, you will need to make sure the variable
+# ``$tfile`` points to the correct file listing the directories to delete.
+# This is the **DELETION_FILE** parameter passed to :ref:`unmerged-list-ref`.
+#
+# :author: Max Goncharov <maxi@mit.edu>
+##!
+
 use strict;
 
 my @remfiles = ();
