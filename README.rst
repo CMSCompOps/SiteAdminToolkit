@@ -10,10 +10,11 @@ This package contains tools for Site Admins to maintain their site.
   This documentation is new, so it does not describe all of the tools in this repository.
   Anything that is frequently used should be added to the repository README.
 
-Scripts
--------
+Unmerged Cleaner
+----------------
 
-These are individual scripts, designed to be run alone for a specific task.
+This tool is used to clean unprotected files from a site's :file:`unmerged` directory.
+This is done by running :file:`UnmergedCleaner.py`.
 
 UnmergedCleaner.py
 ~~~~~~~~~~~~~~~~~~
@@ -21,10 +22,13 @@ UnmergedCleaner.py
 .. automodule:: UnmergedCleaner
    :members:
 
-CleanUnmerged.py
-~~~~~~~~~~~~~~~~~~
+Config Tools Module
+~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: CleanUnmerged
+The unmerged cleaner also makes use of the local module Config Tools.
+This is documented below.
+
+.. automodule:: ConfigTools
    :members:
 
 SiteAdminToolkit Forks' Build Statuses
