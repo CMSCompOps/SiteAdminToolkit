@@ -64,9 +64,12 @@ else
 
 fi
 
-# Cherrypy requires some things to be ignored for the class and cherrypy object
-$pylintCall --disable=protected-access,unexpected-keyword-arg,redefined-builtin \
+# Ignore certain errors that you are aware of for each script individually
+$pylintCall --disable=protected-access,unexpected-keyword-arg,redefined-builtin,import-error \
     SiteAdminToolkit/unmerged-cleaner/UnmergedCleaner.py > $outputdir/unmergedcleaner.txt
+
+$pylintCall --disable=protected-access,unexpected-keyword-arg \
+    SiteAdminToolkit/unmerged-cleaner/ConfigTools.py > $outputdir/configtools.txt
 
 # Check the output
 cd $testdir

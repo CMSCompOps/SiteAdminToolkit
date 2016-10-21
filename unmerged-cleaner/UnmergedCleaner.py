@@ -167,13 +167,15 @@ def list_folder(name, opt):
 
     # This is where the call is made depending on what
     # file system the site is running, should add more as we go on
-    inside = os.listdir(name)
     if opt == 'subdirs':
         # Return list of directories
-        return filter(os.path.isdir, inside)
+        the_filter = os.path.isdir
     else:
         # Return list of files
-        return filter(os.path.isfile, inside)
+        the_filter = os.path.isfile
+
+    return [listing for listing in os.listdir(name) if \
+                the_filter(os.path.join(name, listing))]
 
 
 def get_mtime(name):
