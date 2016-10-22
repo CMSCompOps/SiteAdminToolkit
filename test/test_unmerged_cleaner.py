@@ -59,11 +59,11 @@ class TestUnmergedFunctions(unittest.TestCase):
 
     def test_get_protected(self):
         protected = ListDeletable.get_protected()
-        self.assertEqual(isinstance(protected, list), True, 'Protected list is not a list.')
-        self.assertGreater(len(protected), 0, 'Protected list is empty.')
+        self.assertTrue(isinstance(protected, list), 'Protected list is not a list.')
+        self.assertNotEqual(len(protected), 0, 'Protected list is empty.')
         for one_dir in protected:
-            self.assertEqual(one_dir.startswith('/store/'), True,
-                             'Protected directory %s does not have expected LFN.' % one_dir)
+            self.assertTrue(one_dir.startswith('/store/'),
+                            'Protected directory %s does not have expected LFN.' % one_dir)
 
 
 class TestUnmergedFileChecks(unittest.TestCase):
@@ -93,11 +93,11 @@ class TestUnmergedFileChecks(unittest.TestCase):
         time.sleep(2)
         after_create = time.time()
 
-        self.assertGreaterEqual(ListDeletable.get_mtime(tmp_file), int(start_time),
-                                'File appears older than it actually is.')
+        self.assertTrue(ListDeletable.get_mtime(tmp_file) >= int(start_time),
+                        'File appears older than it actually is.')
 
-        self.assertLessEqual(ListDeletable.get_mtime(tmp_file), int(after_create),
-                             'File appears newer than it actually is.')
+        self.assertTrue(ListDeletable.get_mtime(tmp_file) <= int(after_create),
+                        'File appears newer than it actually is.')
 
     def test_deletions(self):
         to_delete = ['delete/not/protected', 'dir/to/delete', 'make/a/dir/to/delete', 'hello/delete']
