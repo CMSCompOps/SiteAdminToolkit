@@ -10,7 +10,6 @@ import socket
 import ssl
 import datetime
 import os
-import sys
 import json
 
 
