@@ -10,7 +10,6 @@ import socket
 import ssl
 import datetime
 import os
-import sys
 import json
 
 
@@ -38,11 +37,12 @@ def unmerged_from_phedex(site_name):
     if site_name == 'test':
         return os.path.join(os.path.abspath('../..'))
 
-    # Python 2.7 verifies HTTPS connections, but earlier version of Python do not
-    if sys.version_info[:2] == (2, 7):
+    # Python 2.7.something verifies HTTPS connections,
+    # but earlier version of Python do not
+    try:
         conn = httplib.HTTPSConnection('cmsweb.cern.ch',
                                        context=ssl._create_unverified_context())
-    else:
+    except AttributeError:
         conn = httplib.HTTPSConnection('cmsweb.cern.ch')
 
     # Get the JSON from Phedex
