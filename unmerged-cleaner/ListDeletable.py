@@ -59,7 +59,11 @@ except ImportError:
     print '\nConfiguration created at config.py.'
     print 'Please correct the default values to match your site'
     print 'and run this script again.'
-    exit()
+
+    if __name__ == '__main__':
+        exit()
+    else:
+        import config
 
 
 class DataNode(object):
