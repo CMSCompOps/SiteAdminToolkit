@@ -34,7 +34,7 @@ There are two steps to this:
    Directories that can be considered for deletion are ones that are not
    `listed as protected by Unified <https://cmst2.web.cern.ch/cmst2/unified/listProtectedLFN.txt>`_,
    are not too new (configurable), and are not in the ``logs`` or ``SAM`` directories (configurable).
-   An optimized tool, :ref:`unmerged-list-ref`, has been created to to this step.
+   An optimized tool, :ref:`unmerged-list-ref`, has been created to do this step.
    See that section for more directions.
 #. **Delete the directories.**
    After creating a list of directories that can be deleted,

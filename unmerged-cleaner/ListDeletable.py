@@ -57,15 +57,20 @@ try:
 except ImportError:
     print 'Generating default configuration...'
     ConfigTools.generate_default_config()
-    print '\nConfiguration created at config.py.'
-    print 'Please correct the default values to match your site'
-    print 'and run this script again.'
 
     if __name__ == '__main__':
+        # Don't run main() without letting the user modify the script first
+        print '\nConfiguration created at config.py.'
+        print 'Please correct the default values to match your site'
+        print 'and run this script again.'
         exit()
-    else:
-        import config
 
+    else:
+        # Now import the config
+        import config
+        # Clean up
+        os.remove('config.py')
+        os.remove('config.pyc')
 
 class DataNode(object):
     """
@@ -93,7 +98,7 @@ class DataNode(object):
         Recursively builds the full tree.
         """
 
-        lfn_path_name = os.path.join(ConfigTools.LFN, self.path_name)
+        lfn_path_name = os.path.join(config.LFN_TO_CLEAN, self.path_name)
 
         # If protected, cannot delete this DataNode, and stop filling
         if bi_search(ALL_LENGTHS, len(lfn_path_name)) and \
@@ -307,7 +312,7 @@ def main():
 
     del_file = open(config.DELETION_FILE, 'w')
     for item in dirs_to_delete:
-        del_file.write(os.path.join(ConfigTools.LFN, item.path_name) + '\n')
+        del_file.write(os.path.join(config.LFN_TO_CLEAN, item.path_name) + '\n')
     del_file.close()
 
 
