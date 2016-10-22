@@ -12,6 +12,7 @@
 # Before running it at your site, you will need to make sure the variable
 # ``$tfile`` points to the correct file listing the directories to delete.
 # This is the **DELETION_FILE** parameter passed to :ref:`unmerged-list-ref`.
+# Also check that ``$file`` results in the proper transformation between LFN and PFN.
 #
 # :author: Max Goncharov <maxi@mit.edu>
 ##!

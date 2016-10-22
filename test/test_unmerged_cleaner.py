@@ -74,6 +74,7 @@ class TestUnmergedFileChecks(unittest.TestCase):
         self.tmpdir = testfixtures.TempDirectory(path=unmerged_location)
 
     def tearDown(self):
+        self.tmpdir.cleanup()
         shutil.rmtree(unmerged_location)
 
     def test_size(self):

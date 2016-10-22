@@ -1,6 +1,6 @@
 """
 This module includes tools for identifying the location of the unmerged directory
-as well as generates the default configuration.
+as well as generating the default configuration.
 
 :author: Daniel Abercrombie <dabercro@mit.edu>
 """
@@ -89,7 +89,7 @@ def guess_site():
 # Default values for the configuration are given here:
 DEFAULTS = {
     'LFN_TO_CLEAN': '/store/unmerged',
-    'STORAGE_TYPE': 'hadoop',
+    'STORAGE_TYPE': 'Hadoop',
     'DELETION_FILE': '/tmp/files_to_delete.txt',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
     'MIN_AGE':       60 * 60 * 24 * 7    # Corresponds to one week
@@ -98,20 +98,21 @@ DEFAULTS = {
 DOCS = {
     'SITE_NAME': ('This is the site that the script is run at.\n'
                   'The only thing this affects is the PFN of the unmerged directory,\n'
-                  'which can be overwritten directly.'),
-    'LFN_TO_CLEAN': ('The LFN of the folder that the Unmerged Cleaner tool cleans.\n'
+                  'which can be overwritten directly using **UNMERGED_DIR_LOCATION**.'),
+    'LFN_TO_CLEAN': ('The Unmerged Cleaner tool cleans the directory matching this LFN.\n'
                      'On most sites, this will not need to be changed, but it is possible\n'
-                     'for ``/store/dcachetests/unmerged`` to exist, for example.\n'
+                     'for a ``/store/dcachetests/unmerged`` directory to exist, for example.\n'
                      'The default is ``\'%s\'``.' % DEFAULTS['LFN_TO_CLEAN']),
-    'UNMERGED_DIR_LOCATION': ('The location of the unmerged directory.\n'
-                              'Can either be retrieved from Phedex (default) or given explicitly.'),
+    'UNMERGED_DIR_LOCATION': ('The location, or PFN, of the unmerged directory.\n'
+                              'This can be retrieved from Phedex (default) or given explicitly.'),
     'STORAGE_TYPE': ('This defines the storage type of the site.\n'
-                     'This will be useful if there are future optimizations,\n'
-                     'but is currently not used.\n'
+                     'This may be necessary for the script to run correctly or optimally.\n'
+                     'Acceptable values are ``\'Hadoop\'`` or ``\'dCache\'``.\n'
                      'The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
-    'DELETION_FILE': ('The list of directories to delete are placed in a file at this location.\n'
+    'DELETION_FILE': ('The list of directory LFNs to delete are placed this file.\n'
                       'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
-    'DIRS_TO_AVOID': ('This is a list of directories immediately inside unmerged to leave alone.\n'
+    'DIRS_TO_AVOID': ('The directories in this list are left alone.\n'
+                      'Only the first of directories is checked against this.\n'
                       'The defaults are ``%s``.' % DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE': ('Any directories with an age less than this, in seconds, will not be deleted.\n'
                 'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE'])

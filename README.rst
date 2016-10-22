@@ -4,15 +4,15 @@ Site Admin Toolkit
 |build|
 
 This package contains useful tools for Site Admins to maintain their site.
-These are generally Python or Perl scripts designed to be run from within the
+These are generally scripts designed to be run from within the
 directory they are stored after some configuration for a given site.
 
 .. contents:: :local:
 
 .. note::
 
-  This documentation is new, so it does not describe all of the tools in this repository.
-  Anything that is frequently used should be added to the repository README.
+  This documentation is new, so it does not describe all of the tools in ``SiteAdminToolkit`` repository.
+  Anything that is frequently used should be added to the repository README to be useful to future admins.
 
 Installation
 ------------
@@ -22,26 +22,28 @@ the centralized :ref:`toolbox-ref`, installation can simply be done by cloning t
 
     git clone https://github.com/CMSCompOps/SiteAdminToolkit.git
 
-Installation of the Site Admin Toolkit has also been enabled under the general :ref:`OpsSpace installer <setup-ref>`.
+However, if you wish to run the test suites at your site,
+you should install through the :ref:`OpsSpace installer <setup-ref>`.
 
 Unmerged Cleaner
 ----------------
 
-The Unmerged Cleaner tool is used to clean unprotected files from a site's ``/store/unmerged`` directory.
-There are two steps to this:
+The Unmerged Cleaner tool is used to clean unprotected files from a site's unmerged directory.
+This is usually the LFN ``/store/unmerged``.
+Other possibilities exist, such as ``/store/dcachetests/unmerged``,
+so this can be changed in the offered tools, as described under :ref:`listdel-config-ref`.
+Aside from configuration, there are two steps to the deletion:
 
-#. **List the directories inside /store/unmerged that can be deleted.**
+#. **List the directories inside the unmerged directory that can be deleted.**
    Directories that can be considered for deletion are ones that are not
    `listed as protected by Unified <https://cmst2.web.cern.ch/cmst2/unified/listProtectedLFN.txt>`_,
    are not too new (configurable), and are not in the ``logs`` or ``SAM`` directories (configurable).
    An optimized tool, :ref:`unmerged-list-ref`, has been created to do this step.
    See that section for more directions.
 #. **Delete the directories.**
-   After creating a list of directories that can be deleted,
-   it is the admin's responsibility to remove them.
+   After creating a list of directories that can be deleted, it is the admin's responsibility to remove them.
    Available tools are described under :ref:`unmerged-delete-ref`.
-   Feel free to contribute scripts used for your own site
-   by creating a pull request at the 
+   Feel free to contribute scripts used for your own site by creating a pull request at the 
    `CMSCompOps repository <https://github.com/CMSCompOps/SiteAdminToolkit>`_.
    Contributers are encouraged to follow :ref:`developer-ref`.   
 
