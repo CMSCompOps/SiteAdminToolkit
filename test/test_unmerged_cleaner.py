@@ -7,6 +7,7 @@ import random
 import uuid
 import testfixtures
 import time
+import shutil
 
 import CMSToolBox._loadtestpath
 import ListDeletable
@@ -16,10 +17,10 @@ import ListDeletable
 if not os.path.exists('unmerged_results'):
     os.mkdir('unmerged_results')
 
-unmerged_location = os.path.join(os.path.dirname(__file__), 'unmerged')
+unmerged_location = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'unmerged')
 ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged_location
 ListDeletable.config.DELETION_FILE = 'unmerged_results/to_delete.txt'
-ListDeletable.config.DIRS_TO_AVOID = ['avoid', 'dir/to/avoid']
+ListDeletable.config.DIRS_TO_AVOID = ['avoid']
 
 protected_list = ['protected1', 'dir/that/is/protected', 'delete/except/protected']
 ListDeletable.PROTECTED_LIST = [os.path.join(ListDeletable.config.LFN_TO_CLEAN, protected) \
@@ -70,10 +71,10 @@ class TestUnmergedFileChecks(unittest.TestCase):
     tmpdir = None
 
     def setUp(self):
-        self.tmpdir = testfixtures.TempDirectory(unmerged_location)
+        self.tmpdir = testfixtures.TempDirectory(path=unmerged_location)
 
     def tearDown(self):
-        self.tmpdir.cleanup()
+        shutil.rmtree(unmerged_location)
 
     def test_size(self):
         for log_size in range(1, 7):
@@ -98,6 +99,44 @@ class TestUnmergedFileChecks(unittest.TestCase):
         self.assertLessEqual(ListDeletable.get_mtime(tmp_file), int(after_create),
                              'File appears newer than it actually is.')
 
+    def test_deletions(self):
+        to_delete = ['delete/not/protected', 'dir/to/delete', 'make/a/dir/to/delete', 'hello/delete']
+        touched_new = ['touch/this']
+        too_new = ['hello/new', 'new']
+        all_dirs = to_delete + too_new + touched_new + \
+            ListDeletable.config.DIRS_TO_AVOID + protected_list
+
+        start_time = time.time()
+        for next_dir in all_dirs:
+            if next_dir not in too_new:
+                self.tmpdir.write(os.path.join(next_dir, 'test_file.root'),
+                                  bytearray(os.urandom(1024)))
+
+        print 'Waiting for some time.'
+
+        time.sleep(5)
+        cutoff_time = int(time.time())
+        time.sleep(5)
+
+        for next_dir in too_new:
+            self.tmpdir.write(os.path.join(next_dir, 'test_file.root'),
+                              bytearray(os.urandom(1024)))
+        for next_dir in touched_new:
+            os.utime(self.tmpdir.getpath(os.path.join(next_dir, 'test_file.root')),
+                     None)
+
+        ListDeletable.config.MIN_AGE = int(time.time() - cutoff_time)
+        ListDeletable.NOW = int(time.time())
+        ListDeletable.main()
+
+        with open(ListDeletable.config.DELETION_FILE, 'r') as deletions:
+            for deleted in deletions.readlines():
+                shutil.rmtree(ListDeletable.lfn_to_pfn(deleted.strip('\n')))
+
+        for dir in all_dirs:
+            check_file = self.tmpdir.getpath(os.path.join(dir, 'test_file.root'))
+            self.assertEqual(os.path.exists(check_file), dir not in to_delete,
+                             'File status is unexpected: %s' % check_file)
 
 if __name__ == '__main__':
     unittest.main()

@@ -174,8 +174,10 @@ def bi_search(thelist, item):
 
     # Check that the list has non-zero length and
     # if the bisected result is equal to the search term
-    if thelist and thelist[bisect_left(thelist, item)] == item:
-        return True
+    if thelist:
+        index = bisect_left(thelist, item)
+        if index != len(thelist) and thelist[index] == item:
+            return True
 
     # If not returned True, then the item is not in the list
     return False
@@ -264,6 +266,17 @@ def get_protected():
     conn.close()
 
     return protected
+
+
+def lfn_to_pfn(lfn):
+    """
+    :param str lfn: is the LFN of a file
+    :returns: the PFN
+    :rtype: str
+    """
+
+    pfn = lfn.replace(config.LFN_TO_CLEAN, config.UNMERGED_DIR_LOCATION)
+    return pfn
 
 
 def main():
