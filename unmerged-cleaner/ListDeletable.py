@@ -38,7 +38,8 @@ Anyone who wants to contribute optimized versions of these functions,
 depending on the value of :py:data:`config.STORAGE_TYPE` (as it is called from within this script)
 are welcome to make pull requests.
 
-:authors: Max Goncharov <maxi@mit.edu> \n
+:authors: Christoph Wissing <christoph.wissing@desy.de> \n
+          Max Goncharov <maxi@mit.edu> \n
           Daniel Abercrombie <dabercro@mit.edu>
 """
 
