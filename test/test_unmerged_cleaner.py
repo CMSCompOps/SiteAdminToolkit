@@ -75,7 +75,8 @@ class TestUnmergedFileChecks(unittest.TestCase):
 
     def tearDown(self):
         self.tmpdir.cleanup()
-        shutil.rmtree(unmerged_location)
+        if os.path.exists(unmerged_location):
+            shutil.rmtree(unmerged_location)
 
     def test_size(self):
         for log_size in range(1, 7):
@@ -100,7 +101,9 @@ class TestUnmergedFileChecks(unittest.TestCase):
         self.assertTrue(ListDeletable.get_mtime(tmp_file) <= int(after_create),
                         'File appears newer than it actually is.')
 
-    def test_deletions(self):
+    def do_deletion(self, delete_function):
+        # Pass a function that does the deletion
+
         to_delete = ['delete/not/protected', 'dir/to/delete', 'make/a/dir/to/delete', 'hello/delete']
         touched_new = ['touch/this']
         too_new = ['hello/new', 'new']
@@ -130,14 +133,41 @@ class TestUnmergedFileChecks(unittest.TestCase):
         ListDeletable.NOW = int(time.time())
         ListDeletable.main()
 
-        with open(ListDeletable.config.DELETION_FILE, 'r') as deletions:
-            for deleted in deletions.readlines():
-                shutil.rmtree(ListDeletable.lfn_to_pfn(deleted.strip('\n')))
+        delete_function() # Function that does deletion is done here
 
         for dir in all_dirs:
             check_file = self.tmpdir.getpath(os.path.join(dir, 'test_file.root'))
             self.assertEqual(os.path.exists(check_file), dir not in to_delete,
                              'File status is unexpected: %s' % check_file)
 
+    def test_deletions(self):
+        methods = {
+            'test': [ListDeletable.do_delete],         # Test the do_delete function
+            'Hadoop': [
+                ListDeletable.do_delete,               # Test the do_delete function
+                lambda: os.system(                     # Test the Perl script
+                    '%s %s' % (
+                        os.path.join(os.path.dirname(__file__), '../unmerged-cleaner/HadoopDelete.pl'),
+                        ListDeletable.config.DELETION_FILE
+                        )
+                    )
+                ],
+            'dCache': []
+            }
+
+        for i, method in enumerate(methods[ListDeletable.config.STORAGE_TYPE]):
+            if i != 0:
+                self.tearDown()
+                self.setUp()
+
+            self.do_deletion(method)
+
 if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        sys.argv.append('test')
+
+    ListDeletable.config.STORAGE_TYPE = sys.argv[1]
+
+    print 'Testing for \'%s\' systems.' % sys.argv.pop(1)
+
     unittest.main()

@@ -43,7 +43,8 @@ Potential Optimization
 This script was developed on a Hadoop system.
 There are three different functions that interact with the file system which could potentially
 be broken or unoptimized for other types of file systems.
-These functions are :py:func:`list_folder`, :py:func:`get_file_size`, and :py:func:`get_mtime`.
+These functions are :py:func:`list_folder`, :py:func:`get_file_size`,
+:py:func:`do_delete`, and :py:func:`get_mtime`.
 
 Anyone who wants to contribute optimized versions of these functions,
 depending on the value of :py:data:`config.STORAGE_TYPE` (as it is called from within the script)
@@ -58,6 +59,7 @@ import httplib
 import json
 import os
 import time
+import shutil
 from bisect import bisect_left
 
 import ConfigTools
@@ -288,6 +290,20 @@ def lfn_to_pfn(lfn):
 
     pfn = lfn.replace(config.LFN_TO_CLEAN, config.UNMERGED_DIR_LOCATION)
     return pfn
+
+
+def do_delete():
+    """
+    Does the deletion for a site based on the deletion file contents.
+
+    .. Note::
+
+       This can potentially be optimized for different filesystems.
+    """
+
+    with open(config.DELETION_FILE, 'r') as deletions:
+        for deleted in deletions.readlines():
+            shutil.rmtree(lfn_to_pfn(deleted.strip('\n')))
 
 
 def main():
