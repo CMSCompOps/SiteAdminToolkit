@@ -1,10 +1,19 @@
 #! /usr/bin/env python
 
 """
-This script can take two optional argments.
-The first one is the location of the folder to be tested.
-The second one is the type of filesystem testing for.
+``test/test_unmerged_cleaner.py`` performs the unit tests for the :ref:`unmerged-ref`.
+The script can take two optional argments for testing for the file system at your site.
+
+The first argument is the location of the folder to be tested.
+This should be a location that does not exist, and it should be in a location managed
+by the filesystem to test.
+
+The second argument is the type of filesystem testing for.
+See :ref:`listdel-config-ref` for the currently supported file system types.
+
+:author: Daniel Abercrombie <dabercro@mit.edu>
 """
+
 
 import os
 import sys
@@ -19,24 +28,20 @@ import CMSToolBox._loadtestpath
 import ListDeletable
 
 
+# Check if the place to do the test is already used or not
+unmerged_location = ListDeletable.config.UNMERGED_DIR_LOCATION
+
+if os.path.exists(unmerged_location):
+    print ('Path %s already exists. Refusing to do unit tests.' % 
+           unmerged_location)
+    exit()
+else:
+    print 'Running test at %s' % unmerged_location
+
 # Set up some configuration for the test
 if not os.path.exists('unmerged_results'):
     os.mkdir('unmerged_results')
 
-if len(sys.argv) > 1:
-    unmerged_root = sys.argv.pop(1)
-else:
-    unmerged_root = os.path.abspath(os.path.dirname(__file__))
-
-unmerged_location = os.path.join(unmerged_root, 'unmerged')
-
-if os.path.exists(unmerged_location):
-    print 'Path %s already exists. Refusing to do unit tests.' % unmerged_location
-    exit()
-
-ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged_location
-ListDeletable.config.DELETION_FILE = 'unmerged_results/to_delete.txt'
-ListDeletable.config.DIRS_TO_AVOID = ['avoid']
 
 protected_list = ['protected1', 'dir/that/is/protected', 'delete/except/protected']
 ListDeletable.PROTECTED_LIST = [os.path.join(ListDeletable.config.LFN_TO_CLEAN, protected) \
@@ -53,25 +58,27 @@ class TestUnmergedFunctions(unittest.TestCase):
         test_list = random.sample(xrange(1000000), 10000)
         test_list.sort()
 
-        element = test_list[int(random.random() * len(test_list))]
-        self.assertEqual(ListDeletable.bi_search(test_list, element),
-                         True, 'bi_search did not find number when it should.')
+        for i in range(100):
+            element = test_list[int(random.random() * len(test_list))]
+            self.assertEqual(ListDeletable.bi_search(test_list, element),
+                             True, 'bi_search did not find number when it should.')
 
-        popped = test_list.pop(int(random.random() * len(test_list)))
-        self.assertEqual(ListDeletable.bi_search(test_list, popped),
-                         False, 'bi_search found a number when it should not.')
+            popped = test_list.pop(int(random.random() * len(test_list)))
+            self.assertEqual(ListDeletable.bi_search(test_list, popped),
+                             False, 'bi_search found a number when it should not.')
 
     def test_search_strings(self):
-        test_list = list(set(uuid.uuid4 for i in range(1000)))
+        test_list = list(set(str(uuid.uuid4()) for i in range(1000)))
         test_list.sort()
 
-        element = test_list[int(random.random() * len(test_list))]
-        self.assertEqual(ListDeletable.bi_search(test_list, element),
-                         True, 'bi_search did not find string when it should.')
+        for i in range(100):
+            element = test_list[int(random.random() * len(test_list))]
+            self.assertEqual(ListDeletable.bi_search(test_list, element),
+                             True, 'bi_search did not find string when it should.')
 
-        popped = test_list.pop(int(random.random() * len(test_list)))
-        self.assertEqual(ListDeletable.bi_search(test_list, popped),
-                         False, 'bi_search found a string when it should not.')
+            popped = test_list.pop(int(random.random() * len(test_list)))
+            self.assertEqual(ListDeletable.bi_search(test_list, popped),
+                             False, 'bi_search found a string when it should not.')
 
     def test_get_protected(self):
         protected = ListDeletable.get_protected()
@@ -180,11 +187,4 @@ class TestUnmergedFileChecks(unittest.TestCase):
             self.do_deletion(method)
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        sys.argv.append('test')
-
-    ListDeletable.config.STORAGE_TYPE = sys.argv[1]
-
-    print 'Testing for \'%s\' systems.' % sys.argv.pop(1)
-
     unittest.main()

@@ -1,3 +1,5 @@
+.. _site-admin-tool-ref:
+
 Site Admin Toolkit
 ==================
 
@@ -14,6 +16,8 @@ directory they are stored after some configuration for a given site.
   This documentation is new, so it does not describe all of the tools in ``SiteAdminToolkit`` repository.
   Anything that is frequently used should be added to the repository README to be useful to future admins.
 
+.. _site-admin-tool-install-ref:
+
 Installation
 ------------
 
@@ -24,6 +28,8 @@ the centralized :ref:`toolbox-ref`, installation can simply be done by cloning t
 
 However, if you wish to run the test suites at your site,
 you should install through the :ref:`OpsSpace installer <setup-ref>`.
+
+.. _unmerged-ref:
 
 Unmerged Cleaner
 ----------------
@@ -70,6 +76,11 @@ This is documented for reference purposes.
 
 Deletion Tools
 ~~~~~~~~~~~~~~
+
+If you are going to use one of the available deletion tools on your site,
+it is recommended that you run the unmerged cleaner unit test.
+
+.. automodule:: test_unmerged_cleaner
 
 Currently, there is only one deletion tool available.
 This is a Perl script that is used on Hadoop systems.

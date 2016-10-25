@@ -71,19 +71,10 @@ except ImportError:
     print 'Generating default configuration...'
     ConfigTools.generate_default_config()
 
-    if __name__ == '__main__':
-        # Don't run main() without letting the user modify the script first
-        print '\nConfiguration created at config.py.'
-        print 'Please correct the default values to match your site'
-        print 'and run this script again.'
-        exit()
-
-    else:
-        # Now import the config
-        import config
-        # Clean up
-        os.remove('config.py')
-        os.remove('config.pyc')
+    print '\nConfiguration created at config.py.'
+    print 'Please correct the default values to match your site'
+    print 'and run this script again.'
+    exit()
 
 class DataNode(object):
     """
