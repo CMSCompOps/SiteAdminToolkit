@@ -145,12 +145,13 @@ class TestUnmergedFileChecks(unittest.TestCase):
             'test': [ListDeletable.do_delete],         # Test the do_delete function
             'Hadoop': [
                 ListDeletable.do_delete,               # Test the do_delete function
-                lambda: os.system(                     # Test the Perl script
-                    '%s %s' % (
-                        os.path.join(os.path.dirname(__file__), '../unmerged-cleaner/HadoopDelete.pl'),
-                        ListDeletable.config.DELETION_FILE
-                        )
-                    )
+# The Perl script is not configurable enough for unit tests at the moment
+#                lambda: os.system(                     # Test the Perl script
+#                    '%s %s' % (
+#                        os.path.join(os.path.dirname(__file__), '../unmerged-cleaner/HadoopDelete.pl'),
+#                        ListDeletable.config.DELETION_FILE
+#                        )
+#                    )
                 ],
             'dCache': []
             }
