@@ -61,8 +61,31 @@ import os
 import time
 import shutil
 from bisect import bisect_left
+from optparse import OptionParser
 
 import ConfigTools
+
+
+if __name__ == '__main__':
+    PARSER = OptionParser('Usage: ./%prog [options]\n\n'
+                          '  This script can list and delete directories over the course of\n'
+                          '  multiple runs. The first time is it run, it generates a file,\n'
+                          '  config.py. Edit config.py so that it points to the correct LFN and\n'
+                          '  PFN names, along with targets the proper storage type. The second\n'
+                          '  time it runs, this script creates a list of directories to delete.\n'
+                          '  These directories can then be deleted with this script by passing\n'
+                          '  the --delete flag.\n\n'
+                          ' See http://cms-comp-ops-tools.readthedocs.io/en/latest/'
+                          'siteadmintoolkit.html#module-ListDeletable for more details.')
+
+    PARSER.add_option('--delete', action='store_true', dest='do_delete',
+                      help=('This flag cause the script to operate in deletion mode. '
+                            'The script has to create the deletion file before this mode '
+                            'can be activated so that the site admin can take a look by '
+                            'hand at the deletion list.'))
+
+    (OPTS, ARGS) = PARSER.parse_args()
+
 
 try:
     import config
@@ -286,11 +309,17 @@ def lfn_to_pfn(lfn):
 def do_delete():
     """
     Does the deletion for a site based on the deletion file contents.
+    If the deletion file does not exist a message is printed to the user
+    and the script exits.
 
     .. Note::
 
        This can potentially be optimized for different filesystems.
     """
+
+    if not os.path.isfile(config.DELETION_FILE):
+        print 'Deletion file %s has not been created yet.' % config.DELETION_FILE
+        exit()
 
     with open(config.DELETION_FILE, 'r') as deletions:
         for deleted in deletions.readlines():
@@ -341,6 +370,10 @@ def main():
 
         dirs_to_delete.extend(list_to_del)
 
+    deletion_dir = os.path.dirname(config.DELETION_FILE)
+    if not os.path.exists(deletion_dir):
+        os.makedirs(deletion_dir)
+
     del_file = open(config.DELETION_FILE, 'w')
     for item in dirs_to_delete:
         del_file.write(os.path.join(config.LFN_TO_CLEAN, item.path_name) + '\n')
@@ -355,17 +388,20 @@ NOW = int(time.time())
 
 if __name__ == '__main__':
 
-    # The list of protected directories to not delete
-    PROTECTED_LIST = get_protected()
-    PROTECTED_LIST.sort()
+    if OPTS.do_delete:
+        do_delete()
 
-    # The lengths of these protected directories for optimization
-    ALL_LENGTHS = list(set(
-        len(protected) for protected in PROTECTED_LIST))
+    else:
+        # The list of protected directories to not delete
+        PROTECTED_LIST = get_protected()
+        PROTECTED_LIST.sort()
 
-    ALL_LENGTHS.sort()
+        # The lengths of these protected directories for optimization
+        ALL_LENGTHS = list(set(len(protected) for protected in PROTECTED_LIST))
 
-    main()
+        ALL_LENGTHS.sort()
+
+        main()
 
 else:
 

@@ -82,11 +82,25 @@ it is recommended that you run the unmerged cleaner unit test.
 
 .. automodule:: test_unmerged_cleaner
 
-Currently, there is only one deletion tool available.
-This is a Perl script that is used on Hadoop systems.
+Currently, there are two deletion tool available.
+One is integrated into ``ListDeletable.py``,
+and the other is a Perl script that is used on Hadoop systems.
+
+ListDeletable.py --delete
++++++++++++++++++++++++++
+
+After creating the list of directories to delete and checking them,
+``ListDelete.py --delete`` reads your deletion file and removes the directories listed.
+This is done via the :py:func:`ListDeletable.do_delete` function.
+This flag will only work after the deletion file is created.
+It is not possible to list and remove directories with an unmodified ``ListDeletable.py`` at the same time.
 
 HadoopDelete.pl
 +++++++++++++++
+
+.. Warning::
+
+   Currently untested.
 
 .. autoanysrc:: phony
    :src: ../SiteAdminToolkit/unmerged-cleaner/HadoopDelete.pl

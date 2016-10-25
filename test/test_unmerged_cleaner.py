@@ -2,14 +2,13 @@
 
 """
 ``test/test_unmerged_cleaner.py`` performs the unit tests for the :ref:`unmerged-ref`.
-The script can take two optional argments for testing for the file system at your site.
+The script can take two optional arguments for testing for the file system at your site.
 
-The first argument is the location of the folder to be tested.
-This should be a location that does not exist, and it should be in a location managed
-by the filesystem to test.
-
-The second argument is the type of filesystem testing for.
-See :ref:`listdel-config-ref` for the currently supported file system types.
+- The first argument is the location of the folder to be tested.
+  This should be a location that does not exist, and it should be in a location managed
+  by the filesystem to test.
+- The second argument is the type of filesystem testing for.
+  See :ref:`listdel-config-ref` for the currently supported file system types.
 
 :author: Daniel Abercrombie <dabercro@mit.edu>
 """
@@ -31,16 +30,13 @@ import ListDeletable
 # Check if the place to do the test is already used or not
 unmerged_location = ListDeletable.config.UNMERGED_DIR_LOCATION
 
+
 if os.path.exists(unmerged_location):
     print ('Path %s already exists. Refusing to do unit tests.' % 
            unmerged_location)
     exit()
 else:
     print 'Running test at %s' % unmerged_location
-
-# Set up some configuration for the test
-if not os.path.exists('unmerged_results'):
-    os.mkdir('unmerged_results')
 
 
 protected_list = ['protected1', 'dir/that/is/protected', 'delete/except/protected']
@@ -166,7 +162,9 @@ class TestUnmergedFileChecks(unittest.TestCase):
 
     def test_deletions(self):
         methods = {
-            'test': [ListDeletable.do_delete],         # Test the do_delete function
+            'test': [
+                ListDeletable.do_delete
+                ],         # Test the do_delete function
             'Hadoop': [
                 ListDeletable.do_delete,               # Test the do_delete function
 # The Perl script is not configurable enough for unit tests at the moment
