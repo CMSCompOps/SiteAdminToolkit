@@ -108,7 +108,8 @@ class TestUnmergedFileChecks(unittest.TestCase):
                                          bytearray(os.urandom(size)))
 
             self.assertEqual(ListDeletable.get_file_size(tmp_file), size,
-                             'get_file_size is returning wrong value.')
+                             'get_file_size is returning wrong value -- %s for %s.' %
+                             (ListDeletable.get_file_size(tmp_file), size))
 
     def test_time(self):
         print 'Testing timing. Will take a few seconds.'
