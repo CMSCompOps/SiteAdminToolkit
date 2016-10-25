@@ -1,5 +1,11 @@
 #! /usr/bin/env python
 
+"""
+This script can take two optional argments.
+The first one is the location of the folder to be tested.
+The second one is the type of filesystem testing for.
+"""
+
 import os
 import sys
 import unittest
@@ -17,7 +23,17 @@ import ListDeletable
 if not os.path.exists('unmerged_results'):
     os.mkdir('unmerged_results')
 
-unmerged_location = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'unmerged')
+if len(sys.argv) > 1:
+    unmerged_root = sys.argv.pop(1)
+else:
+    unmerged_root = os.path.abspath(os.path.dirname(__file__))
+
+unmerged_location = os.path.join(unmerged_root, 'unmerged')
+
+if os.path.exists(unmerged_location):
+    print 'Path %s already exists. Refusing to do unit tests.' % unmerged_location
+    exit()
+
 ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged_location
 ListDeletable.config.DELETION_FILE = 'unmerged_results/to_delete.txt'
 ListDeletable.config.DIRS_TO_AVOID = ['avoid']
