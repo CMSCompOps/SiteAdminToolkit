@@ -1,3 +1,5 @@
+# pylint: disable=protected-access, unexpected-keyword-arg
+
 """
 This module includes tools for identifying the location of the unmerged directory
 as well as generating the default configuration.
