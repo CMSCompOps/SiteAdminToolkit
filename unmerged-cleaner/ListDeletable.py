@@ -255,7 +255,7 @@ def get_mtime(name):
     :rtype: int
     """
 
-    return int(os.stat(name).st_mtime)
+    return os.stat(name).st_mtime
 
 
 def get_file_size(name):
@@ -271,7 +271,7 @@ def get_file_size(name):
     :rtype: int
     """
 
-    return int(os.stat(name).st_size)
+    return os.stat(name).st_size
 
 
 def get_protected():
@@ -308,6 +308,31 @@ def lfn_to_pfn(lfn):
     return pfn
 
 
+def hadoop_delete(directory):
+    """
+    Does the deletion for Hadoop sites.
+
+    :param str directory: The directory name for hdfs to delete.
+                          This is not exactly the same as the LFN or PFN.
+    """
+
+    # Check if path is still there in case cksum is actually in a different place
+    if os.path.exists(directory):
+        command = 'hdfs dfs -rm -r %s' % directory
+        print 'Will do:', command
+        os.system(command)
+        time.sleep(0.5)
+
+
+def dcache_delete(directory):
+    """
+    Does the deletion for dCache sites.
+
+    :param str directory: The directory name for dCache to delete
+    """
+    print 'Not implimented yet. %s has not been deleted.' % directory
+
+
 def do_delete():
     """
     Does the deletion for a site based on the deletion file contents.
@@ -317,15 +342,40 @@ def do_delete():
     .. Note::
 
        This can potentially be optimized for different filesystems.
+
+    .. Warning::
+
+       **For Hadoop sites:**
+       Currently, we assume your Hadoop instance is mounted at `/mnt/hadoop`.
+       If this is not the case, the wrong `hdfs` call will be made.
+       If you use the `test` storage type, it will instead make
+       a standard `shutil.rmtree` call to the mounted instance.
+       Note that the `test` storage type will also not attempt to remove
+       the `cksums` directory on Hadoop.
     """
 
     if not os.path.isfile(config.DELETION_FILE):
         print 'Deletion file %s has not been created yet.' % config.DELETION_FILE
         exit()
 
+
     with open(config.DELETION_FILE, 'r') as deletions:
         for deleted in deletions.readlines():
-            shutil.rmtree(lfn_to_pfn(deleted.strip('\n')))
+            deleting = lfn_to_pfn(deleted.strip('\n'))
+
+            if config.STORAGE_TYPE == 'Hadoop':
+                # hdfs call does not need /mnt/hadoop at the beginning
+                deleting = deleting.replace('/mnt/hadoop', '')
+                # Hadoop stores also a directory with checksums
+                hadoop_delete(os.path.join('/cksums', deleting))
+                # Delete the unmerged directory
+                hadoop_delete(deleting)
+
+            elif config.STORAGE_TYPE == 'dCache':
+                dcache_delete(deleting)
+
+            else:
+                shutil.rmtree(deleting)
 
 
 def main():
