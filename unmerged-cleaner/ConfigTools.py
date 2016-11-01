@@ -1,3 +1,5 @@
+# pylint: disable=protected-access, unexpected-keyword-arg
+
 """
 This module includes tools for identifying the location of the unmerged directory
 as well as generating the default configuration.
@@ -90,32 +92,37 @@ def guess_site():
 DEFAULTS = {
     'LFN_TO_CLEAN': '/store/unmerged',
     'STORAGE_TYPE': 'Hadoop',
-    'DELETION_FILE': '/tmp/files_to_delete.txt',
+    'DELETION_FILE': '/tmp/dirs_to_delete.txt',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
     'MIN_AGE':       60 * 60 * 24 * 7    # Corresponds to one week
 }
 
 DOCS = {
-    'SITE_NAME': ('This is the site that the script is run at.\n'
-                  'The only thing this affects is the PFN of the unmerged directory,\n'
-                  'which can be overwritten directly using **UNMERGED_DIR_LOCATION**.'),
-    'LFN_TO_CLEAN': ('The Unmerged Cleaner tool cleans the directory matching this LFN.\n'
-                     'On most sites, this will not need to be changed, but it is possible\n'
-                     'for a ``/store/dcachetests/unmerged`` directory to exist, for example.\n'
-                     'The default is ``\'%s\'``.' % DEFAULTS['LFN_TO_CLEAN']),
-    'UNMERGED_DIR_LOCATION': ('The location, or PFN, of the unmerged directory.\n'
-                              'This can be retrieved from Phedex (default) or given explicitly.'),
-    'STORAGE_TYPE': ('This defines the storage type of the site.\n'
-                     'This may be necessary for the script to run correctly or optimally.\n'
-                     'Acceptable values are ``\'Hadoop\'`` or ``\'dCache\'``.\n'
-                     'The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
-    'DELETION_FILE': ('The list of directory LFNs to delete are placed this file.\n'
-                      'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
-    'DIRS_TO_AVOID': ('The directories in this list are left alone.\n'
-                      'Only the first of directories is checked against this.\n'
-                      'The defaults are ``%s``.' % DEFAULTS['DIRS_TO_AVOID']),
-    'MIN_AGE': ('Any directories with an age less than this, in seconds, will not be deleted.\n'
-                'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE'])
+    'SITE_NAME':
+        ('This is the site where the script is run at. The only thing this affects is the PFN\n'
+         'of the unmerged directory, which can be overwritten directly using '
+         '**UNMERGED_DIR_LOCATION**.'),
+    'LFN_TO_CLEAN':
+        ('The Unmerged Cleaner tool cleans the directory matching this LFN. On most sites, this\n'
+         'will not need to be changed, but it is possible for a ``/store/dcachetests/unmerged``\n'
+         'directory to exist, for example. The default is ``\'%s\'``.' % DEFAULTS['LFN_TO_CLEAN']),
+    'UNMERGED_DIR_LOCATION':
+        ('The location, or PFN, of the unmerged directory. This can be\n'
+         'retrieved from Phedex (default) or given explicitly.'),
+    'STORAGE_TYPE':
+        ('This defines the storage type of the site. This may be necessary for the script to run\n'
+         'correctly or optimally. Acceptable values are ``\'test\'``, ``\'Hadoop\'``, or '
+         '``\'dCache\'``.\nThe default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
+    'DELETION_FILE':
+        ('The list of directory LFNs to delete are placed this file.\n'
+         'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
+    'DIRS_TO_AVOID':
+        ('The directories in this list are left alone. Only the top level of directories within\n'
+         'the unmerged location is checked against this. The defaults are ``%s``.' %
+         DEFAULTS['DIRS_TO_AVOID']),
+    'MIN_AGE':
+        ('Directories with an age less than this, in seconds, will not be deleted.\n'
+         'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE'])
 }
 
 VAR_ORDER = [
@@ -178,5 +185,6 @@ def generate_default_config():
             # Order matters, so I put it by hand here.
             for var in VAR_ORDER:
 
-                config_file.write('\n# ' + DOCS[var].replace('\n', '\n# ') + '\n')
+                config_file.write('\n#' + '-' * 99 + '\n')
+                config_file.write('# ' + DOCS[var].replace('\n', '\n# ').replace('``', '') + '\n\n')
                 config_file.write(get_default(var) + '\n')

@@ -8,11 +8,15 @@
 # This script, located in ``SiteAdminTools/unmerged-cleaner/HadoopDelete.pl``,
 # is used to delete files and directories inside of a list of directories.
 # In particular, it is used on the Hadoop site T2_US_MIT.
+# Before running it at your site, check that ``$file`` results in
+# the proper transformation between LFN and PFN.
 #
-# Before running it at your site, you will need to make sure the variable
-# ``$tfile`` points to the correct file listing the directories to delete.
-# This is the **DELETION_FILE** parameter passed to :ref:`unmerged-list-ref`.
-# Also check that ``$file`` results in the proper transformation between LFN and PFN.
+# To run the script, pass the location of the **DELETION_FILE** parameter
+# that is set in :ref:`unmerged-list-ref` as the arugment.
+# For example, if the directories to delete are listed in
+# ``/tmp/dirs_to_delete.txt``, run this script as::
+#
+#     ./HadoopDelete.pl /tmp/dirs_to_delete.txt
 #
 # :author: Max Goncharov <maxi@mit.edu>
 ##!
@@ -20,7 +24,7 @@
 use strict;
 
 my @remfiles = ();
-my $tfile = "/root/files2delete.txt";
+my $tfile = $ARGV[0];
 open(IN, "$tfile") || die "$tfile does not exist\n";
 while(<IN>){
     chomp;

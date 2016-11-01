@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+# pylint: disable=redefined-builtin,import-error
+
 """
 This script is located as :file:`SiteAdminToolkit/unmerged-cleaner/ListDeletable.py`.
 After cloning the repository, it can immediately be run by::
@@ -43,7 +45,8 @@ Potential Optimization
 This script was developed on a Hadoop system.
 There are three different functions that interact with the file system which could potentially
 be broken or unoptimized for other types of file systems.
-These functions are :py:func:`list_folder`, :py:func:`get_file_size`, and :py:func:`get_mtime`.
+These functions are :py:func:`list_folder`, :py:func:`get_file_size`,
+:py:func:`do_delete`, and :py:func:`get_mtime`.
 
 Anyone who wants to contribute optimized versions of these functions,
 depending on the value of :py:data:`config.STORAGE_TYPE` (as it is called from within the script)
@@ -58,9 +61,33 @@ import httplib
 import json
 import os
 import time
+import shutil
 from bisect import bisect_left
+from optparse import OptionParser
 
 import ConfigTools
+
+
+if __name__ == '__main__':
+    PARSER = OptionParser('Usage: ./%prog [options]\n\n'
+                          '  This script can list and delete directories over the course of\n'
+                          '  multiple runs. The first time is it run, it generates a file,\n'
+                          '  config.py. Edit config.py so that it points to the correct LFN and\n'
+                          '  PFN names, along with targets the proper storage type. The second\n'
+                          '  time it runs, this script creates a list of directories to delete.\n'
+                          '  These directories can then be deleted with this script by passing\n'
+                          '  the --delete flag.\n\n'
+                          ' See http://cms-comp-ops-tools.readthedocs.io/en/latest/'
+                          'siteadmintoolkit.html#module-ListDeletable for more details.')
+
+    PARSER.add_option('--delete', action='store_true', dest='do_delete',
+                      help=('This flag cause the script to operate in deletion mode. '
+                            'The script has to create the deletion file before this mode '
+                            'can be activated so that the site admin can take a look by '
+                            'hand at the deletion list.'))
+
+    (OPTS, ARGS) = PARSER.parse_args()
+
 
 try:
     import config
@@ -69,19 +96,10 @@ except ImportError:
     print 'Generating default configuration...'
     ConfigTools.generate_default_config()
 
-    if __name__ == '__main__':
-        # Don't run main() without letting the user modify the script first
-        print '\nConfiguration created at config.py.'
-        print 'Please correct the default values to match your site'
-        print 'and run this script again.'
-        exit()
-
-    else:
-        # Now import the config
-        import config
-        # Clean up
-        os.remove('config.py')
-        os.remove('config.pyc')
+    print '\nConfiguration created at config.py.'
+    print 'Please correct the default values to match your site'
+    print 'and run this script again.'
+    exit()
 
 class DataNode(object):
     """
@@ -237,7 +255,7 @@ def get_mtime(name):
     :rtype: int
     """
 
-    return int(os.stat(name).st_mtime)
+    return os.stat(name).st_mtime
 
 
 def get_file_size(name):
@@ -253,7 +271,7 @@ def get_file_size(name):
     :rtype: int
     """
 
-    return int(os.stat(name).st_size)
+    return os.stat(name).st_size
 
 
 def get_protected():
@@ -288,6 +306,73 @@ def lfn_to_pfn(lfn):
 
     pfn = lfn.replace(config.LFN_TO_CLEAN, config.UNMERGED_DIR_LOCATION)
     return pfn
+
+
+def hadoop_delete(directory):
+    """
+    Does the deletion for Hadoop sites.
+
+    :param str directory: The directory name for hdfs to delete.
+                          This is not exactly the same as the LFN or PFN.
+    """
+
+    # Check if path is still there in case cksum is actually in a different place
+    if os.path.exists(directory):
+        command = 'hdfs dfs -rm -r %s' % directory
+        print 'Will do:', command
+        os.system(command)
+        time.sleep(0.5)
+
+
+def dcache_delete(directory):
+    """
+    Does the deletion for dCache sites.
+
+    :param str directory: The directory name for dCache to delete
+    """
+    print 'Not implimented yet. %s has not been deleted.' % directory
+
+
+def do_delete():
+    """
+    Does the deletion for a site based on the deletion file contents.
+    If the deletion file does not exist a message is printed to the user
+    and the script exits.
+
+    .. Note::
+
+       This can potentially be optimized for different filesystems.
+
+    .. Warning::
+
+       **For Hadoop sites:**
+       Currently, we assume your Hadoop instance is mounted at `/mnt/hadoop`
+       and the checksums are located under `/mnt/hadoop/cksums`.
+       If this is not the case, the cksums will not be deleted.
+       Your LFN will still be properly propagated to delete
+       the unmerged files themselves.
+    """
+
+    if not os.path.isfile(config.DELETION_FILE):
+        print 'Deletion file %s has not been created yet.' % config.DELETION_FILE
+        exit()
+
+
+    with open(config.DELETION_FILE, 'r') as deletions:
+        for deleted in deletions.readlines():
+            deleting = lfn_to_pfn(deleted.strip('\n'))
+
+            if config.STORAGE_TYPE == 'Hadoop':
+                # Hadoop stores also a directory with checksums
+                hadoop_delete(os.path.join('/cksums', deleting))
+                # Delete the unmerged directory
+                hadoop_delete(deleting)
+
+            elif config.STORAGE_TYPE == 'dCache':
+                dcache_delete(deleting)
+
+            else:
+                shutil.rmtree(deleting)
 
 
 def main():
@@ -334,6 +419,10 @@ def main():
 
         dirs_to_delete.extend(list_to_del)
 
+    deletion_dir = os.path.dirname(config.DELETION_FILE)
+    if not os.path.exists(deletion_dir):
+        os.makedirs(deletion_dir)
+
     del_file = open(config.DELETION_FILE, 'w')
     for item in dirs_to_delete:
         del_file.write(os.path.join(config.LFN_TO_CLEAN, item.path_name) + '\n')
@@ -348,17 +437,20 @@ NOW = int(time.time())
 
 if __name__ == '__main__':
 
-    # The list of protected directories to not delete
-    PROTECTED_LIST = get_protected()
-    PROTECTED_LIST.sort()
+    if OPTS.do_delete:
+        do_delete()
 
-    # The lengths of these protected directories for optimization
-    ALL_LENGTHS = list(set(
-        len(protected) for protected in PROTECTED_LIST))
+    else:
+        # The list of protected directories to not delete
+        PROTECTED_LIST = get_protected()
+        PROTECTED_LIST.sort()
 
-    ALL_LENGTHS.sort()
+        # The lengths of these protected directories for optimization
+        ALL_LENGTHS = list(set(len(protected) for protected in PROTECTED_LIST))
 
-    main()
+        ALL_LENGTHS.sort()
+
+        main()
 
 else:
 

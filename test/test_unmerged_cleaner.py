@@ -1,5 +1,19 @@
 #! /usr/bin/env python
 
+"""
+``test/test_unmerged_cleaner.py`` performs the unit tests for the :ref:`unmerged-ref`.
+The script can take two optional arguments for testing for the file system at your site.
+
+- The first argument is the location of the folder to be tested.
+  This should be a location that does not exist, and it should be in a location managed
+  by the filesystem to test.
+- The second argument is the type of filesystem testing for.
+  See :ref:`listdel-config-ref` for the currently supported file system types.
+
+:author: Daniel Abercrombie <dabercro@mit.edu>
+"""
+
+
 import os
 import sys
 import unittest
@@ -13,14 +27,17 @@ import CMSToolBox._loadtestpath
 import ListDeletable
 
 
-# Set up some configuration for the test
-if not os.path.exists('unmerged_results'):
-    os.mkdir('unmerged_results')
+# Check if the place to do the test is already used or not
+unmerged_location = ListDeletable.config.UNMERGED_DIR_LOCATION
 
-unmerged_location = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'unmerged')
-ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged_location
-ListDeletable.config.DELETION_FILE = 'unmerged_results/to_delete.txt'
-ListDeletable.config.DIRS_TO_AVOID = ['avoid']
+
+if os.path.exists(unmerged_location):
+    print ('Path %s already exists. Refusing to do unit tests.' % 
+           unmerged_location)
+    exit()
+else:
+    print 'Running test at %s' % unmerged_location
+
 
 protected_list = ['protected1', 'dir/that/is/protected', 'delete/except/protected']
 ListDeletable.PROTECTED_LIST = [os.path.join(ListDeletable.config.LFN_TO_CLEAN, protected) \
@@ -37,25 +54,27 @@ class TestUnmergedFunctions(unittest.TestCase):
         test_list = random.sample(xrange(1000000), 10000)
         test_list.sort()
 
-        element = test_list[int(random.random() * len(test_list))]
-        self.assertEqual(ListDeletable.bi_search(test_list, element),
-                         True, 'bi_search did not find number when it should.')
+        for i in range(100):
+            element = test_list[int(random.random() * len(test_list))]
+            self.assertEqual(ListDeletable.bi_search(test_list, element),
+                             True, 'bi_search did not find number when it should.')
 
-        popped = test_list.pop(int(random.random() * len(test_list)))
-        self.assertEqual(ListDeletable.bi_search(test_list, popped),
-                         False, 'bi_search found a number when it should not.')
+            popped = test_list.pop(int(random.random() * len(test_list)))
+            self.assertEqual(ListDeletable.bi_search(test_list, popped),
+                             False, 'bi_search found a number when it should not.')
 
     def test_search_strings(self):
-        test_list = list(set(uuid.uuid4 for i in range(1000)))
+        test_list = list(set(str(uuid.uuid4()) for i in range(1000)))
         test_list.sort()
 
-        element = test_list[int(random.random() * len(test_list))]
-        self.assertEqual(ListDeletable.bi_search(test_list, element),
-                         True, 'bi_search did not find string when it should.')
+        for i in range(100):
+            element = test_list[int(random.random() * len(test_list))]
+            self.assertEqual(ListDeletable.bi_search(test_list, element),
+                             True, 'bi_search did not find string when it should.')
 
-        popped = test_list.pop(int(random.random() * len(test_list)))
-        self.assertEqual(ListDeletable.bi_search(test_list, popped),
-                         False, 'bi_search found a string when it should not.')
+            popped = test_list.pop(int(random.random() * len(test_list)))
+            self.assertEqual(ListDeletable.bi_search(test_list, popped),
+                             False, 'bi_search found a string when it should not.')
 
     def test_get_protected(self):
         protected = ListDeletable.get_protected()
@@ -75,7 +94,8 @@ class TestUnmergedFileChecks(unittest.TestCase):
 
     def tearDown(self):
         self.tmpdir.cleanup()
-        shutil.rmtree(unmerged_location)
+        if os.path.exists(unmerged_location):
+            shutil.rmtree(unmerged_location)
 
     def test_size(self):
         for log_size in range(1, 7):
@@ -84,7 +104,8 @@ class TestUnmergedFileChecks(unittest.TestCase):
                                          bytearray(os.urandom(size)))
 
             self.assertEqual(ListDeletable.get_file_size(tmp_file), size,
-                             'get_file_size is returning wrong value.')
+                             'get_file_size is returning wrong value -- %s for %s.' %
+                             (ListDeletable.get_file_size(tmp_file), size))
 
     def test_time(self):
         print 'Testing timing. Will take a few seconds.'
@@ -100,7 +121,9 @@ class TestUnmergedFileChecks(unittest.TestCase):
         self.assertTrue(ListDeletable.get_mtime(tmp_file) <= int(after_create),
                         'File appears newer than it actually is.')
 
-    def test_deletions(self):
+    def do_deletion(self, delete_function):
+        # Pass a function that does the deletion
+
         to_delete = ['delete/not/protected', 'dir/to/delete', 'make/a/dir/to/delete', 'hello/delete']
         touched_new = ['touch/this']
         too_new = ['hello/new', 'new']
@@ -130,14 +153,37 @@ class TestUnmergedFileChecks(unittest.TestCase):
         ListDeletable.NOW = int(time.time())
         ListDeletable.main()
 
-        with open(ListDeletable.config.DELETION_FILE, 'r') as deletions:
-            for deleted in deletions.readlines():
-                shutil.rmtree(ListDeletable.lfn_to_pfn(deleted.strip('\n')))
+        delete_function() # Function that does deletion is done here
 
         for dir in all_dirs:
             check_file = self.tmpdir.getpath(os.path.join(dir, 'test_file.root'))
             self.assertEqual(os.path.exists(check_file), dir not in to_delete,
                              'File status is unexpected: %s' % check_file)
+
+    def test_deletions(self):
+        methods = {
+            'test': [
+                ListDeletable.do_delete
+                ],         # Test the do_delete function
+            'Hadoop': [
+                ListDeletable.do_delete,               # Test the do_delete function
+# The Perl script is not configurable enough for unit tests at the moment
+#                lambda: os.system(                     # Test the Perl script
+#                    '%s %s' % (
+#                        os.path.join(os.path.dirname(__file__), '../unmerged-cleaner/HadoopDelete.pl'),
+#                        ListDeletable.config.DELETION_FILE
+#                        )
+#                    )
+                ],
+            'dCache': []
+            }
+
+        for i, method in enumerate(methods[ListDeletable.config.STORAGE_TYPE]):
+            if i != 0:
+                self.tearDown()
+                self.setUp()
+
+            self.do_deletion(method)
 
 if __name__ == '__main__':
     unittest.main()
