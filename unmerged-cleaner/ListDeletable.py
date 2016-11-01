@@ -346,12 +346,11 @@ def do_delete():
     .. Warning::
 
        **For Hadoop sites:**
-       Currently, we assume your Hadoop instance is mounted at `/mnt/hadoop`.
-       If this is not the case, the wrong `hdfs` call will be made.
-       If you use the `test` storage type, it will instead make
-       a standard `shutil.rmtree` call to the mounted instance.
-       Note that the `test` storage type will also not attempt to remove
-       the `cksums` directory on Hadoop.
+       Currently, we assume your Hadoop instance is mounted at `/mnt/hadoop`
+       and the checksums are located under `/mnt/hadoop/cksums`.
+       If this is not the case, the cksums will not be deleted.
+       Your LFN will still be properly propagated to delete
+       the unmerged files themselves.
     """
 
     if not os.path.isfile(config.DELETION_FILE):
@@ -364,8 +363,6 @@ def do_delete():
             deleting = lfn_to_pfn(deleted.strip('\n'))
 
             if config.STORAGE_TYPE == 'Hadoop':
-                # hdfs call does not need /mnt/hadoop at the beginning
-                deleting = deleting.replace('/mnt/hadoop', '')
                 # Hadoop stores also a directory with checksums
                 hadoop_delete(os.path.join('/cksums', deleting))
                 # Delete the unmerged directory
