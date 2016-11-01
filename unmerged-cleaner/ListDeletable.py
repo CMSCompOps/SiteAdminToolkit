@@ -364,7 +364,7 @@ def do_delete():
 
             if config.STORAGE_TYPE == 'Hadoop':
                 # Hadoop stores also a directory with checksums
-                hadoop_delete(os.path.join('/cksums', deleting))
+                hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
                 # Delete the unmerged directory
                 hadoop_delete(deleting)
 
