@@ -89,10 +89,20 @@ and the other is a Perl script that is used on Hadoop systems.
 ListDeletable.py --delete
 +++++++++++++++++++++++++
 
+``ListDeletable.py`` can be used to directly delete files if the **WHICH_LIST** mode is ``'directories'``
+and the **STORAGE_TYPE** is either ``'Hadoop'`` or ``'test'``.
+
+.. Warning::
+
+   Any settings than those listed above have not been tested by the provided deletion tools.
+   Use adjusted scripts carefully.
+
 After creating the list of directories to delete and checking them,
 ``ListDelete.py --delete`` reads your deletion file and removes the directories listed.
 This is done via the :py:func:`ListDeletable.do_delete` function.
-This flag will only work after the deletion file is created.
+Please check the function documentation for any existing caveats.
+
+This ``--delete`` flag will only work after the deletion file is created.
 It is not possible to list and remove directories with an unmodified ``ListDeletable.py`` at the same time.
 
 HadoopDelete.pl

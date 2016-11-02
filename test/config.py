@@ -21,3 +21,4 @@ if len(sys.argv) == 1:
     sys.argv.append('test')
 
 STORAGE_TYPE = sys.argv.pop(1)
+WHICH_LIST = 'directories'
