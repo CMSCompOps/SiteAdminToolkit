@@ -1,9 +1,5 @@
 #!/usr/bin/perl -w
 
-#
-# $Id$
-#
-
 ##!
 # This script, located in ``SiteAdminTools/unmerged-cleaner/HadoopDelete.pl``,
 # is used to delete files and directories inside of a list of directories.

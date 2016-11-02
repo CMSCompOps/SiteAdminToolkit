@@ -61,6 +61,7 @@ import httplib
 import json
 import os
 import time
+import subprocess
 import shutil
 from bisect import bisect_left
 from optparse import OptionParser
@@ -343,6 +344,11 @@ def do_delete():
 
        This can potentially be optimized for different filesystems.
 
+    .. Note::
+
+       This function only works with **WHICH_LIST** set to
+       ``\'directories\'`` at the moment.
+
     .. Warning::
 
        **For Hadoop sites:**
@@ -357,6 +363,10 @@ def do_delete():
         print 'Deletion file %s has not been created yet.' % config.DELETION_FILE
         exit()
 
+    if config.WHICH_LIST != 'directories':
+        print 'Unsupported list type suspected.'
+        print 'Check your config and rerun without --delete first.'
+        exit()
 
     with open(config.DELETION_FILE, 'r') as deletions:
         for deleted in deletions.readlines():
@@ -373,6 +383,57 @@ def do_delete():
 
             else:
                 shutil.rmtree(deleting)
+
+
+def get_unmerged_files():
+    """
+    :returns: the old files' PFNs in the unmerged directory
+    :rtype: list
+    """
+
+    find_cmd = 'find {0} -type f -ctime +{1}s -print'.format(
+        config.UNMERGED_DIR_LOCATION, config.MIN_AGE)
+
+    out = subprocess.Popen(find_cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, _ = out.communicate()
+    return stdout.decode().split()
+
+
+def filter_protected(unmerged_files, protected):
+    """
+    Lists unprotected files
+
+    :param list unmerged_files: the list of files to check and delete, if unprotected.
+    :param list protected: the list of protected LFNs.
+    """
+
+    print 'Got %i deletion candidates' % len(unmerged_files)
+    print 'Have %i protcted dirs' % len(protected)
+    n_protect = 0
+    n_delete = 0
+
+    with open(config.DELETIONS_FILE, 'w') as deletions:
+
+        for unmerged_file in unmerged_files:
+            # print 'Checking file %s' %file
+            protect = False
+
+            for lfn in protected:
+                pfn = lfn_to_pfn(lfn)
+                if pfn in unmerged_file:
+                    print '%s is protected by path %s' % (unmerged_file, pfn)
+                    protect = True
+                    break
+
+            if not protect:
+                deletions.write(unmerged_file + '\n')
+                n_delete += 1
+            else:
+                n_protect += 1
+
+    print 'Number deleted: %i,\nNumber protected: %i' % (n_delete, n_protect)
 
 
 def main():
@@ -435,6 +496,7 @@ __doc__ %= '\n'.join(['- **%s** - %s' % (var, ConfigTools.DOCS[var].replace('\n'
 
 NOW = int(time.time())
 
+
 if __name__ == '__main__':
 
     if OPTS.do_delete:
@@ -450,7 +512,14 @@ if __name__ == '__main__':
 
         ALL_LENGTHS.sort()
 
-        main()
+        if config.WHICH_LIST == 'directories':
+            main()
+
+        elif config.WHICH_LIST == 'files':
+            filter_protected(get_unmerged_files(), PROTECTED_LIST)
+
+        else:
+            print 'The WHICH_LIST parameter in config.py is not valid.'
 
 else:
 

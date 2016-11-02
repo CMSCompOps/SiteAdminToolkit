@@ -90,11 +90,12 @@ def guess_site():
 
 # Default values for the configuration are given here:
 DEFAULTS = {
-    'LFN_TO_CLEAN': '/store/unmerged',
-    'STORAGE_TYPE': 'Hadoop',
+    'LFN_TO_CLEAN':  '/store/unmerged',
+    'STORAGE_TYPE':  'Hadoop',
     'DELETION_FILE': '/tmp/dirs_to_delete.txt',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
-    'MIN_AGE':       60 * 60 * 24 * 7    # Corresponds to one week
+    'MIN_AGE':       60 * 60 * 24 * 7,    # Corresponds to one week
+    'WHICH_LIST':    'directories'
 }
 
 DOCS = {
@@ -111,8 +112,8 @@ DOCS = {
          'retrieved from Phedex (default) or given explicitly.'),
     'STORAGE_TYPE':
         ('This defines the storage type of the site. This may be necessary for the script to run\n'
-         'correctly or optimally. Acceptable values are ``\'test\'``, ``\'Hadoop\'``, or '
-         '``\'dCache\'``.\nThe default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
+         'correctly or optimally. Acceptable values are ``\'test\'`` (POSIX), ``\'Hadoop\'``, or\n'
+         '``\'dCache\'``. The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
     'DELETION_FILE':
         ('The list of directory LFNs to delete are placed this file.\n'
          'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
@@ -122,7 +123,12 @@ DOCS = {
          DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE':
         ('Directories with an age less than this, in seconds, will not be deleted.\n'
-         'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE'])
+         'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE']),
+    'WHICH_LIST':
+        ('Determines whether a list of directories or files will be generated.\n'
+         'Directories listed will be in LFN format, while files listed will be in PFN format.\n'
+         'Possible values are ``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.'
+         % DEFAULTS['WHICH_LIST'])
 }
 
 VAR_ORDER = [
@@ -133,6 +139,7 @@ VAR_ORDER = [
     'DIRS_TO_AVOID',
     'MIN_AGE',
     'STORAGE_TYPE',
+    'WHICH_LIST'
     ]
 
 
