@@ -61,6 +61,7 @@ import httplib
 import json
 import os
 import time
+import subprocess
 import shutil
 from bisect import bisect_left
 from optparse import OptionParser
@@ -390,10 +391,12 @@ def get_unmerged_files():
     :rtype: list
     """
 
-    find_cmd = 'find {0} -type f -ctime +{1}s -print'.format(get_unmerged_location(),
-                                                             config.MIN_AGE)
+    find_cmd = 'find {0} -type f -ctime +{1}s -print'.format(
+        config.UNMERGED_DIR_LOCATION, config.MIN_AGE)
+
     out = subprocess.Popen(find_cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     stdout, _ = out.communicate()
     return stdout.decode().split()
 
