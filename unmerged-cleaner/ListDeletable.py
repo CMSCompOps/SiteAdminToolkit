@@ -372,6 +372,14 @@ def do_delete():
         for deleted in deletions.readlines():
             deleting = lfn_to_pfn(deleted.strip('\n'))
 
+            # Do a check of the directory names. End process if something is wrong.
+            if '/unmerged/' not in deleting:
+                print 'Something is either wrong with your deletions file or'
+                print 'ListDetetable.do_delete().'
+                print 'Your deletions file is at', config.DELETION_FILE
+                print 'Refusing to continue.'
+                exit()
+
             if config.STORAGE_TYPE == 'Hadoop':
                 # Hadoop stores also a directory with checksums
                 hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
