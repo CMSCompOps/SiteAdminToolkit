@@ -365,6 +365,7 @@ def do_delete():
 
     if config.WHICH_LIST != 'directories':
         print 'Unsupported list type suspected.'
+        print 'This tool only delete at the directory level.'
         print 'Check your config and rerun without --delete first.'
         exit()
 
@@ -425,7 +426,6 @@ def filter_protected(unmerged_files, protected):
     with open(config.DELETIONS_FILE, 'w') as deletions:
 
         for unmerged_file in unmerged_files:
-            # print 'Checking file %s' %file
             protect = False
 
             for lfn in protected:

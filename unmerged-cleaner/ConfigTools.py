@@ -57,6 +57,10 @@ def pfn_from_phedex(site_name, lfn):
 
 def guess_site():
     """
+    .. Todo:
+
+       Get the host_map from SiteDB or someplace like that.
+
     :returns: Guessed site name for current location based on hostname
     :rtype: str
     """
@@ -67,7 +71,13 @@ def guess_site():
     # Feel free to add your domain here.
 
     host_map = {
+        'oeaw.ac.at':     'T2_AT_Vienna',
+        'iihe.ac.be':     'T2_BE_IIHE',
+        'ucl.ac.be':      'T2_BE_UCL',
+        'sprace.org.br':  'T2_BR_SPRACE',
+        'cscs.ch':        'T2_CH_CSCS',
         'desy.de':        'T2_DE_DESY',
+        'ciemat.es':      'T2_ES_CIEMAT',
         'ultralight.org': 'T2_US_Caltech',
         'ufl.edu':        'T2_US_Florida',
         'mit.edu':        'T2_US_MIT',
