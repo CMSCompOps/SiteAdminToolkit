@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# pylint: disable=redefined-builtin,import-error
+# pylint: disable=redefined-builtin, import-error
 
 """
 This script is located as :file:`SiteAdminToolkit/unmerged-cleaner/ListDeletable.py`.

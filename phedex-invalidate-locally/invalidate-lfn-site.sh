@@ -1,11 +1,13 @@
 #!/bin/bash
 SITE="T2_US_Caltech"
-PHEDEX_ROOT=$(echo $PHEDEX_CONFIG_FILE | awk -F"Config" '{print $1}')
+PHEDEX_ROOT=$(echo "$PHEDEX_CONFIG_FILE" | awk -F"Config" '{print $1}')
+echo "$PHEDEX_ROOT"
 
 ## WARNING : This is in dry-run mode (doesn't invalidate anything)
 ## To do that, uncomment the obvious line (test it before with a single file)
 
-if [ -z "$($PWD/search-replicas.sh $1 | grep "no other replica")" ] ; then
+# shellcheck disable=SC2143
+if [ -z "$("$PWD"/search-replicas.sh "$1" | grep "no other replica")" ] ; then
 
         echo "present in other locations than $SITE : $1 - INVALIDATING"
 	echo "lfn:$1" > /tmp/invalidate-file.txt
