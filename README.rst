@@ -10,6 +10,7 @@ These are generally scripts designed to be run from within the
 directory they are stored after some configuration for a given site.
 
 .. contents:: :local:
+   :depth: 3
 
 .. note::
 
@@ -114,7 +115,7 @@ HadoopDelete.pl
 
 .. autoanysrc:: phony
    :src: ../SiteAdminToolkit/unmerged-cleaner/HadoopDelete.pl
-   :analyzer: shell-script
+   :analyzer: perl-script
 
 SiteAdminToolkit Forks' Build Statuses
 --------------------------------------
