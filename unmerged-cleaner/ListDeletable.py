@@ -401,6 +401,8 @@ def do_delete():
 
             else:
                 if os.path.isfile(deleting):
+                    print 'About to delete %s' % deleting
+                    time.sleep(config.SLEEP_TIME)
                     os.remove(deleting)
 
 
