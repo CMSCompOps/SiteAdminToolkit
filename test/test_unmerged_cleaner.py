@@ -4,11 +4,11 @@
 ``test/test_unmerged_cleaner.py`` performs the unit tests for the :ref:`unmerged-ref`.
 The script can take two optional arguments for testing for the file system at your site.
 
-- The first argument is the location of the folder to be tested.
-  This should be a location that does not exist, and it should be in a location managed
-  by the filesystem to test.
+- The first argument is the location of the directory to be tested.
+  This should be a directory that does not exist,
+  and it should be in a location managed by the filesystem to test.
 - The second argument is the type of filesystem testing for.
-  See :ref:`listdel-config-ref` for the currently supported file system types.
+  See **STORAGE_TYPE** under :ref:`listdel-config-ref` for the currently supported file system types.
 
 :author: Daniel Abercrombie <dabercro@mit.edu>
 """
@@ -162,10 +162,10 @@ class TestUnmergedFileChecks(unittest.TestCase):
 
     def test_deletions(self):
         methods = {
-            'test': [
+            'posix': [
                 ListDeletable.do_delete
                 ],         # Test the do_delete function
-            'Hadoop': [
+            'hadoop': [
                 ListDeletable.do_delete,               # Test the do_delete function
 # The Perl script is not configurable enough for unit tests at the moment
 #                lambda: os.system(                     # Test the Perl script
@@ -175,15 +175,20 @@ class TestUnmergedFileChecks(unittest.TestCase):
 #                        )
 #                    )
                 ],
-            'dCache': []
+            'dcache': []
             }
 
         for i, method in enumerate(methods[ListDeletable.config.STORAGE_TYPE]):
-            if i != 0:
+            for which in ['directories', 'files']:
+
+                print 'Testing deletions on %s using %s' % (ListDeletable.config.STORAGE_TYPE, which)
+
+                ListDeletable.config.WHICH_LIST = which
+
                 self.tearDown()
                 self.setUp()
 
-            self.do_deletion(method)
+                self.do_deletion(method)
 
 if __name__ == '__main__':
     unittest.main()

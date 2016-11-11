@@ -57,17 +57,27 @@ def pfn_from_phedex(site_name, lfn):
 
 def guess_site():
     """
+    .. Todo:
+
+       Get the host_map from SiteDB or someplace like that.
+
     :returns: Guessed site name for current location based on hostname
     :rtype: str
     """
 
-    host = socket.gethostname()
+    host = socket.getfqdn()
 
     # Try mapping directly the domain to the LFN.
     # Feel free to add your domain here.
 
     host_map = {
+        'oeaw.ac.at':     'T2_AT_Vienna',
+        'iihe.ac.be':     'T2_BE_IIHE',
+        'ucl.ac.be':      'T2_BE_UCL',
+        'sprace.org.br':  'T2_BR_SPRACE',
+        'cscs.ch':        'T2_CH_CSCS',
         'desy.de':        'T2_DE_DESY',
+        'ciemat.es':      'T2_ES_CIEMAT',
         'ultralight.org': 'T2_US_Caltech',
         'ufl.edu':        'T2_US_Florida',
         'mit.edu':        'T2_US_MIT',
@@ -91,17 +101,17 @@ def guess_site():
 # Default values for the configuration are given here:
 DEFAULTS = {
     'LFN_TO_CLEAN':  '/store/unmerged',
-    'STORAGE_TYPE':  'Hadoop',
-    'DELETION_FILE': '/tmp/dirs_to_delete.txt',
+    'STORAGE_TYPE':  'posix',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
     'MIN_AGE':       60 * 60 * 24 * 7,    # Corresponds to one week
-    'WHICH_LIST':    'directories'
+    'WHICH_LIST':    'directories',
+    'SLEEP_TIME':    0.5,
 }
 
 DOCS = {
     'SITE_NAME':
-        ('This is the site where the script is run at. The only thing this affects is the PFN\n'
-         'of the unmerged directory, which can be overwritten directly using '
+        ('This is the site where the script is run at. The only thing this affects is the LFN\n'
+         'to PFN translation of the unmerged directory, which can be overwritten directly using '
          '**UNMERGED_DIR_LOCATION**.'),
     'LFN_TO_CLEAN':
         ('The Unmerged Cleaner tool cleans the directory matching this LFN. On most sites, this\n'
@@ -112,34 +122,40 @@ DOCS = {
          'retrieved from Phedex (default) or given explicitly.'),
     'STORAGE_TYPE':
         ('This defines the storage type of the site. This may be necessary for the script to run\n'
-         'correctly or optimally. Acceptable values are ``\'test\'`` (POSIX), ``\'Hadoop\'``, or\n'
-         '``\'dCache\'``. The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
+         'correctly or optimally. Acceptable values are ``\'posix\'`` and ``\'hadoop\'``.\n'
+         'The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
     'DELETION_FILE':
-        ('The list of directory LFNs to delete are placed this file.\n'
-         'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
+        ('The list of directory or file PFNs to delete are placed this file.\n'
+         'The default is ``\'/tmp/<WHICH_LIST>_to_delete.txt\'``.'),
     'DIRS_TO_AVOID':
         ('The directories in this list are left alone. Only the top level of directories within\n'
-         'the unmerged location is checked against this. The defaults are ``%s``.' %
-         DEFAULTS['DIRS_TO_AVOID']),
+         'the unmerged location is checked against this if WHICH_LIST is ``\'directories\'``.\n'
+         'The defaults are ``%s``.' % DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE':
         ('Directories with an age less than this, in seconds, will not be deleted.\n'
-         'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE']),
+         'The default (``%s``) corresponds to one week.\n'
+         'Mathematical expressions here are evaluated.' % DEFAULTS['MIN_AGE']),
     'WHICH_LIST':
         ('Determines whether a list of directories or files will be generated.\n'
-         'Directories listed will be in LFN format, while files listed will be in PFN format.\n'
-         'Possible values are ``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.'
-         % DEFAULTS['WHICH_LIST'])
+         'These lists will be in PFN format. Possible values are\n'
+         '``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.' % DEFAULTS['WHICH_LIST']),
+    'SLEEP_TIME':
+        ('This is the number of seconds between each deletion of a directory or file.\n'
+         'The sleep avoids overloading the system and '
+         'allows the operator to interrupt a deletion.\n'
+         'The default is ``%s``.' % DEFAULTS['SLEEP_TIME']),
 }
 
 VAR_ORDER = [
     'SITE_NAME',
     'LFN_TO_CLEAN',
     'UNMERGED_DIR_LOCATION',
+    'WHICH_LIST',
     'DELETION_FILE',
+    'SLEEP_TIME',
     'DIRS_TO_AVOID',
     'MIN_AGE',
     'STORAGE_TYPE',
-    'WHICH_LIST'
     ]
 
 
@@ -155,6 +171,8 @@ def get_default(key):
         return 'SITE_NAME = \'%s\'' % guess_site()
     elif key == 'UNMERGED_DIR_LOCATION':
         return 'UNMERGED_DIR_LOCATION = pfn_from_phedex(SITE_NAME, LFN_TO_CLEAN)'
+    elif key == 'DELETION_FILE':
+        return 'DELETION_FILE = \'/tmp/%s_to_delete.txt\' % WHICH_LIST'
 
     str_form = key + " = '%s'"
     if not isinstance(DEFAULTS[key], str):

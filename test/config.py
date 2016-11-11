@@ -10,6 +10,7 @@ LFN_TO_CLEAN = '/store/unmerged'
 DELETION_FILE =  'unmerged_results/to_delete.txt'
 DIRS_TO_AVOID = ['avoid']
 MIN_AGE = 5
+SLEEP_TIME = 0.1
 
 if len(sys.argv) > 1:
     UNMERGED_DIR_LOCATION = os.path.abspath(sys.argv.pop(1))
@@ -18,7 +19,7 @@ else:
         os.path.abspath(os.path.dirname(__file__)), 'unmerged')
 
 if len(sys.argv) == 1:
-    sys.argv.append('test')
+    sys.argv.append('posix')
 
 STORAGE_TYPE = sys.argv.pop(1)
 WHICH_LIST = 'directories'
