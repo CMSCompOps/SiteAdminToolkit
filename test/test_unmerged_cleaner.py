@@ -162,7 +162,7 @@ class TestUnmergedFileChecks(unittest.TestCase):
 
     def test_deletions(self):
         methods = {
-            'test': [
+            'posix': [
                 ListDeletable.do_delete
                 ],         # Test the do_delete function
             'Hadoop': [
@@ -179,11 +179,16 @@ class TestUnmergedFileChecks(unittest.TestCase):
             }
 
         for i, method in enumerate(methods[ListDeletable.config.STORAGE_TYPE]):
-            if i != 0:
+            for which in ['directories', 'files']:
+
+                print '%s using %s' % (ListDeletable.config.STORAGE_TYPE, which)
+
+                ListDeletable.config.WHICH_LIST = which
+
                 self.tearDown()
                 self.setUp()
 
-            self.do_deletion(method)
+                self.do_deletion(method)
 
 if __name__ == '__main__':
     unittest.main()

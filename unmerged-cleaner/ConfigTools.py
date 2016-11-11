@@ -65,7 +65,7 @@ def guess_site():
     :rtype: str
     """
 
-    host = socket.gethostname()
+    host = socket.getfqdn()
 
     # Try mapping directly the domain to the LFN.
     # Feel free to add your domain here.
@@ -102,10 +102,10 @@ def guess_site():
 DEFAULTS = {
     'LFN_TO_CLEAN':  '/store/unmerged',
     'STORAGE_TYPE':  'posix',
-    'DELETION_FILE': '/tmp/dirs_to_delete.txt',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
     'MIN_AGE':       60 * 60 * 24 * 7,    # Corresponds to one week
-    'WHICH_LIST':    'directories'
+    'WHICH_LIST':    'directories',
+    'SLEEP_TIME':    0.5,
 }
 
 DOCS = {
@@ -126,7 +126,7 @@ DOCS = {
          'The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
     'DELETION_FILE':
         ('The list of directory LFNs to delete are placed this file.\n'
-         'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
+         'The default is ``\'/tmp/<WHICH_LIST>_to_delete.txt\'``.'),
     'DIRS_TO_AVOID':
         ('The directories in this list are left alone. Only the top level of directories within\n'
          'the unmerged location is checked against this. The defaults are ``%s``.' %
@@ -138,18 +138,24 @@ DOCS = {
         ('Determines whether a list of directories or files will be generated.\n'
          'Directories listed will be in LFN format, while files listed will be in PFN format.\n'
          'Possible values are ``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.'
-         % DEFAULTS['WHICH_LIST'])
+         % DEFAULTS['WHICH_LIST']),
+    'SLEEP_TIME':
+        ('This is the number of seconds between each deletion of a directory or file.\n'
+         'The sleep avoids overloading the system and '
+         'allows the operator to interrupt a deletion.\n'
+         'The default is ``%s``' % DEFAULTS['SLEEP_TIME']),
 }
 
 VAR_ORDER = [
     'SITE_NAME',
     'LFN_TO_CLEAN',
     'UNMERGED_DIR_LOCATION',
+    'WHICH_LIST',
     'DELETION_FILE',
+    'SLEEP_TIME',
     'DIRS_TO_AVOID',
     'MIN_AGE',
     'STORAGE_TYPE',
-    'WHICH_LIST'
     ]
 
 
@@ -165,6 +171,8 @@ def get_default(key):
         return 'SITE_NAME = \'%s\'' % guess_site()
     elif key == 'UNMERGED_DIR_LOCATION':
         return 'UNMERGED_DIR_LOCATION = pfn_from_phedex(SITE_NAME, LFN_TO_CLEAN)'
+    elif key == 'DELETION_FILE':
+        return 'DELETION_FILE = \'/tmp/%s_to_delete.txt\' % WHICH_LIST'
 
     str_form = key + " = '%s'"
     if not isinstance(DEFAULTS[key], str):

@@ -321,8 +321,8 @@ def hadoop_delete(directory):
     if os.path.exists(directory):
         command = 'hdfs dfs -rm -r %s' % directory
         print 'Will do:', command
+        time.sleep(config.SLEEP_TIME)
         os.system(command)
-        time.sleep(0.5)
 
 
 def dcache_delete(directory):
@@ -332,6 +332,7 @@ def dcache_delete(directory):
     :param str directory: The directory name for dCache to delete
     """
     print 'Not implimented yet. %s has not been deleted.' % directory
+    print 'Try posix or editing dcache_delete() in ListDeletable.py'
 
 
 def do_delete():
@@ -364,14 +365,15 @@ def do_delete():
         exit()
 
     if config.WHICH_LIST != 'directories':
-        print 'Unsupported list type suspected.'
-        print 'This tool only delete at the directory level.'
-        print 'Check your config and rerun without --delete first.'
-        exit()
+        print '-' * 40
+        print 'Deleting individual files.'
+        print 'Your sleep time is set to %s seconds.' % config.SLEEP_TIME
+        print 'To change it, edit your config.py.'
+        print '-' * 40
 
     with open(config.DELETION_FILE, 'r') as deletions:
         for deleted in deletions.readlines():
-            deleting = lfn_to_pfn(deleted.strip('\n'))
+            deleting = deleted.strip('\n')
 
             # Do a check of the directory names. End process if something is wrong.
             if '/unmerged/' not in deleting:
@@ -381,19 +383,25 @@ def do_delete():
                 print 'Refusing to continue.'
                 exit()
 
-            if config.STORAGE_TYPE == 'hadoop':
-                # Hadoop stores also a directory with checksums
-                hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
-                # Delete the unmerged directory
-                hadoop_delete(deleting)
+            if config.WHICH_LIST == 'directories':
 
-            elif config.STORAGE_TYPE == 'dcache':
-                dcache_delete(deleting)
+                if config.STORAGE_TYPE == 'hadoop':
+                    # Hadoop stores also a directory with checksums
+                    hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
+                    # Delete the unmerged directory
+                    hadoop_delete(deleting)
+
+                elif config.STORAGE_TYPE == 'dcache':
+                    dcache_delete(deleting)
+
+                else:
+                    print 'About to delete %s' % deleting
+                    time.sleep(config.SLEEP_TIME)
+                    shutil.rmtree(deleting)
 
             else:
-                print 'About to delete %s' % deleting
-                time.sleep(0.1)
-                shutil.rmtree(deleting)
+                if os.path.isfile(deleting):
+                    os.remove(deleting)
 
 
 def get_unmerged_files():
@@ -402,8 +410,11 @@ def get_unmerged_files():
     :rtype: list
     """
 
-    find_cmd = 'find {0} -type f -ctime +{1} -print'.format(
-        config.UNMERGED_DIR_LOCATION, config.MIN_AGE/86400)
+    find_cmd = 'find {0} -type f -not -newermt \'-{1} seconds\' -print'.format(
+        config.UNMERGED_DIR_LOCATION, config.MIN_AGE)
+
+    print 'About to run:'
+    print find_cmd
 
     out = subprocess.Popen(find_cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -422,6 +433,7 @@ def filter_protected(unmerged_files, protected):
 
     print 'Got %i deletion candidates' % len(unmerged_files)
     print 'Have %i protcted dirs' % len(protected)
+    print 'Have %i avoided dirs' % len(config.DIRS_TO_AVOID)
     n_protect = 0
     n_delete = 0
 
@@ -437,13 +449,21 @@ def filter_protected(unmerged_files, protected):
                     protect = True
                     break
 
+            for root_dir in config.DIRS_TO_AVOID:
+                pfn = os.path.join(config.UNMERGED_DIR_LOCATION, root_dir)
+                if pfn in unmerged_file:
+                    print '%s is avoided by path %s' % (unmerged_file, pfn)
+                    protect = True
+                    break
+
+
             if not protect:
                 deletions.write(unmerged_file + '\n')
                 n_delete += 1
             else:
                 n_protect += 1
 
-    print 'Number deleted: %i,\nNumber protected: %i' % (n_delete, n_protect)
+    print 'Number deleted: %i,\nNumber protected/avoided: %i' % (n_delete, n_protect)
 
 
 def main():
@@ -451,53 +471,61 @@ def main():
     Does the full listing for the site given in the :file:`config.py` file.
     """
 
-    print "Some statistics about what is going to be deleted"
-    print "# Folders  Total    Total  DiskSize  FolderName"
-    print "#          Folders  Files  [GB]                "
+    if config.WHICH_LIST == 'files':
+        filter_protected(get_unmerged_files(), PROTECTED_LIST)
 
-    # Get the location of the PFN and the subdirectories there
+    elif config.WHICH_LIST == 'directories':
+        print "Some statistics about what is going to be deleted"
+        print "# Folders  Total    Total  DiskSize  FolderName"
+        print "#          Folders  Files  [GB]                "
 
-    dirs = list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs')
+        # Get the location of the PFN and the subdirectories there
 
-    dirs_to_delete = []
+        dirs = list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs')
 
-    for subdir in dirs:
-        if subdir in config.DIRS_TO_AVOID:
-            continue
+        dirs_to_delete = []
 
-        top_node = DataNode(subdir)
-        top_node.fill()
+        for subdir in dirs:
+            if subdir in config.DIRS_TO_AVOID:
+                continue
 
-        list_to_del = []
-        top_node.traverse_tree(list_to_del)
+            top_node = DataNode(subdir)
+            top_node.fill()
 
-        if len(list_to_del) < 1:
-            continue
+            list_to_del = []
+            top_node.traverse_tree(list_to_del)
 
-        num_todelete_dirs = 0   # Number of directories to be deleted
-        num_todelete_files = 0  # Number of files to be deleted
-        todelete_size = 0       # Amount of space to be deleted (in GB, eventually)
+            if len(list_to_del) < 1:
+                continue
 
-        for item in list_to_del:
-            num_todelete_dirs += item.nsubnodes
-            num_todelete_files += item.nsubfiles
-            todelete_size += item.size
+            num_todelete_dirs = 0   # Number of directories to be deleted
+            num_todelete_files = 0  # Number of files to be deleted
+            todelete_size = 0       # Amount of space to be deleted (in GB, eventually)
 
-        todelete_size /= (1024 * 1024 * 1024)
-        print "  %-8d %-8d %-6d %-9d %-s" \
-              % (len(list_to_del), num_todelete_dirs, num_todelete_files,
-                 todelete_size, subdir)
+            for item in list_to_del:
+                num_todelete_dirs += item.nsubnodes
+                num_todelete_files += item.nsubfiles
+                todelete_size += item.size
 
-        dirs_to_delete.extend(list_to_del)
+            todelete_size /= (1024 * 1024 * 1024)
+            print "  %-8d %-8d %-6d %-9d %-s" \
+                % (len(list_to_del), num_todelete_dirs, num_todelete_files,
+                   todelete_size, subdir)
 
-    deletion_dir = os.path.dirname(config.DELETION_FILE)
-    if not os.path.exists(deletion_dir):
-        os.makedirs(deletion_dir)
+            dirs_to_delete.extend(list_to_del)
 
-    del_file = open(config.DELETION_FILE, 'w')
-    for item in dirs_to_delete:
-        del_file.write(os.path.join(config.LFN_TO_CLEAN, item.path_name) + '\n')
-    del_file.close()
+        deletion_dir = os.path.dirname(config.DELETION_FILE)
+        if not os.path.exists(deletion_dir):
+            os.makedirs(deletion_dir)
+
+        del_file = open(config.DELETION_FILE, 'w')
+        for item in dirs_to_delete:
+            del_file.write(os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) + '\n')
+        del_file.close()
+
+    else:
+        print 'The WHICH_LIST parameter in config.py is not valid.'
+
 
 
 # Generate documentation for the options in the configuration file.
@@ -524,12 +552,6 @@ if __name__ == '__main__':
 
         if config.WHICH_LIST == 'directories':
             main()
-
-        elif config.WHICH_LIST == 'files':
-            filter_protected(get_unmerged_files(), PROTECTED_LIST)
-
-        else:
-            print 'The WHICH_LIST parameter in config.py is not valid.'
 
 else:
 
