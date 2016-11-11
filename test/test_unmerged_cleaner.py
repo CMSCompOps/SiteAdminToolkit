@@ -4,11 +4,11 @@
 ``test/test_unmerged_cleaner.py`` performs the unit tests for the :ref:`unmerged-ref`.
 The script can take two optional arguments for testing for the file system at your site.
 
-- The first argument is the location of the folder to be tested.
-  This should be a location that does not exist, and it should be in a location managed
-  by the filesystem to test.
+- The first argument is the location of the directory to be tested.
+  This should be a directory that does not exist,
+  and it should be in a location managed by the filesystem to test.
 - The second argument is the type of filesystem testing for.
-  See :ref:`listdel-config-ref` for the currently supported file system types.
+  See **STORAGE_TYPE** under :ref:`listdel-config-ref` for the currently supported file system types.
 
 :author: Daniel Abercrombie <dabercro@mit.edu>
 """

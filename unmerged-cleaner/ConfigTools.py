@@ -110,8 +110,8 @@ DEFAULTS = {
 
 DOCS = {
     'SITE_NAME':
-        ('This is the site where the script is run at. The only thing this affects is the PFN\n'
-         'of the unmerged directory, which can be overwritten directly using '
+        ('This is the site where the script is run at. The only thing this affects is the LFN\n'
+         'to PFN translation of the unmerged directory, which can be overwritten directly using '
          '**UNMERGED_DIR_LOCATION**.'),
     'LFN_TO_CLEAN':
         ('The Unmerged Cleaner tool cleans the directory matching this LFN. On most sites, this\n'
@@ -125,25 +125,25 @@ DOCS = {
          'correctly or optimally. Acceptable values are ``\'posix\'`` and ``\'hadoop\'``.\n'
          'The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
     'DELETION_FILE':
-        ('The list of directory LFNs to delete are placed this file.\n'
+        ('The list of directory or file PFNs to delete are placed this file.\n'
          'The default is ``\'/tmp/<WHICH_LIST>_to_delete.txt\'``.'),
     'DIRS_TO_AVOID':
         ('The directories in this list are left alone. Only the top level of directories within\n'
-         'the unmerged location is checked against this. The defaults are ``%s``.' %
-         DEFAULTS['DIRS_TO_AVOID']),
+         'the unmerged location is checked against this if WHICH_LIST is ``\'directories\'``.\n'
+         'The defaults are ``%s``.' % DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE':
         ('Directories with an age less than this, in seconds, will not be deleted.\n'
-         'The default (``%s``) corresponds to one week.' % DEFAULTS['MIN_AGE']),
+         'The default (``%s``) corresponds to one week.\n'
+         'Mathematical expressions here are evaluated.' % DEFAULTS['MIN_AGE']),
     'WHICH_LIST':
         ('Determines whether a list of directories or files will be generated.\n'
-         'Directories listed will be in LFN format, while files listed will be in PFN format.\n'
-         'Possible values are ``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.'
-         % DEFAULTS['WHICH_LIST']),
+         'These lists will be in PFN format. Possible values are\n'
+         '``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.' % DEFAULTS['WHICH_LIST']),
     'SLEEP_TIME':
         ('This is the number of seconds between each deletion of a directory or file.\n'
          'The sleep avoids overloading the system and '
          'allows the operator to interrupt a deletion.\n'
-         'The default is ``%s``' % DEFAULTS['SLEEP_TIME']),
+         'The default is ``%s``.' % DEFAULTS['SLEEP_TIME']),
 }
 
 VAR_ORDER = [
