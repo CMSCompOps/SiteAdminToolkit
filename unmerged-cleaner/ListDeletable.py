@@ -381,16 +381,18 @@ def do_delete():
                 print 'Refusing to continue.'
                 exit()
 
-            if config.STORAGE_TYPE == 'Hadoop':
+            if config.STORAGE_TYPE == 'hadoop':
                 # Hadoop stores also a directory with checksums
                 hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
                 # Delete the unmerged directory
                 hadoop_delete(deleting)
 
-            elif config.STORAGE_TYPE == 'dCache':
+            elif config.STORAGE_TYPE == 'dcache':
                 dcache_delete(deleting)
 
             else:
+                print 'About to delete %s' % deleting
+                time.sleep(0.1)
                 shutil.rmtree(deleting)
 
 
@@ -400,8 +402,8 @@ def get_unmerged_files():
     :rtype: list
     """
 
-    find_cmd = 'find {0} -type f -ctime +{1}s -print'.format(
-        config.UNMERGED_DIR_LOCATION, config.MIN_AGE)
+    find_cmd = 'find {0} -type f -ctime +{1} -print'.format(
+        config.UNMERGED_DIR_LOCATION, config.MIN_AGE/86400)
 
     out = subprocess.Popen(find_cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -423,7 +425,7 @@ def filter_protected(unmerged_files, protected):
     n_protect = 0
     n_delete = 0
 
-    with open(config.DELETIONS_FILE, 'w') as deletions:
+    with open(config.DELETION_FILE, 'w') as deletions:
 
         for unmerged_file in unmerged_files:
             protect = False

@@ -101,7 +101,7 @@ def guess_site():
 # Default values for the configuration are given here:
 DEFAULTS = {
     'LFN_TO_CLEAN':  '/store/unmerged',
-    'STORAGE_TYPE':  'Hadoop',
+    'STORAGE_TYPE':  'posix',
     'DELETION_FILE': '/tmp/dirs_to_delete.txt',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
     'MIN_AGE':       60 * 60 * 24 * 7,    # Corresponds to one week
@@ -122,8 +122,8 @@ DOCS = {
          'retrieved from Phedex (default) or given explicitly.'),
     'STORAGE_TYPE':
         ('This defines the storage type of the site. This may be necessary for the script to run\n'
-         'correctly or optimally. Acceptable values are ``\'test\'`` (POSIX), ``\'Hadoop\'``, or\n'
-         '``\'dCache\'``. The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
+         'correctly or optimally. Acceptable values are ``\'posix\'`` and ``\'hadoop\'``.\n'
+         'The default is ``\'%s\'``.' % DEFAULTS['STORAGE_TYPE']),
     'DELETION_FILE':
         ('The list of directory LFNs to delete are placed this file.\n'
          'The default is ``\'%s\'``.' % DEFAULTS['DELETION_FILE']),
