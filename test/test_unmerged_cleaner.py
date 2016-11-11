@@ -165,7 +165,7 @@ class TestUnmergedFileChecks(unittest.TestCase):
             'posix': [
                 ListDeletable.do_delete
                 ],         # Test the do_delete function
-            'Hadoop': [
+            'hadoop': [
                 ListDeletable.do_delete,               # Test the do_delete function
 # The Perl script is not configurable enough for unit tests at the moment
 #                lambda: os.system(                     # Test the Perl script
@@ -175,13 +175,13 @@ class TestUnmergedFileChecks(unittest.TestCase):
 #                        )
 #                    )
                 ],
-            'dCache': []
+            'dcache': []
             }
 
         for i, method in enumerate(methods[ListDeletable.config.STORAGE_TYPE]):
             for which in ['directories', 'files']:
 
-                print '%s using %s' % (ListDeletable.config.STORAGE_TYPE, which)
+                print 'Testing deletions on %s using %s' % (ListDeletable.config.STORAGE_TYPE, which)
 
                 ListDeletable.config.WHICH_LIST = which
 
