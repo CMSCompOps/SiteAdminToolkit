@@ -548,8 +548,7 @@ if __name__ == '__main__':
 
         ALL_LENGTHS.sort()
 
-        if config.WHICH_LIST == 'directories':
-            main()
+        main()
 
 else:
 
