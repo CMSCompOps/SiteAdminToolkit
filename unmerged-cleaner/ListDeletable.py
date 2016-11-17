@@ -443,14 +443,12 @@ def filter_protected(unmerged_files, protected):
             for lfn in protected:
                 pfn = lfn_to_pfn(lfn)
                 if pfn in unmerged_file:
-                    print '%s is protected by path %s' % (unmerged_file, pfn)
                     protect = True
                     break
 
             for root_dir in config.DIRS_TO_AVOID:
                 pfn = os.path.join(config.UNMERGED_DIR_LOCATION, root_dir)
                 if pfn in unmerged_file:
-                    print '%s is avoided by path %s' % (unmerged_file, pfn)
                     protect = True
                     break
 
@@ -461,7 +459,7 @@ def filter_protected(unmerged_files, protected):
             else:
                 n_protect += 1
 
-    print 'Number deleted: %i,\nNumber protected/avoided: %i' % (n_delete, n_protect)
+    print 'Number to delete: %i,\nNumber protected/avoided: %i' % (n_delete, n_protect)
 
 
 def main():
