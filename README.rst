@@ -22,6 +22,8 @@ directory they are stored after some configuration for a given site.
 Installation
 ------------
 
+The repository is maintained and tested assuming that admins are using Python 2.6.
+Any earlier version of Python will not work with some tools.
 Since the contents of this repository is currently scripts that do not depend on
 the centralized :ref:`toolbox-ref`, installation can simply be done by cloning the repository::
 
