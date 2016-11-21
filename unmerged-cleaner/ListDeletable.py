@@ -9,6 +9,8 @@ After cloning the repository, it can immediately be run by::
     cd SiteAdminToolkit/unmerged-cleaner
     ./ListDeletable.py
 
+It depends on the ``ConfigTools.py`` module too, so it must be run from
+the ``unmerged-cleaner`` directory or the directory must be added to your ``$PYTHONPATH``.
 It is used to list directories that can be removed and stores this list in a simple text file.
 The directories listed are in PFN format.
 
