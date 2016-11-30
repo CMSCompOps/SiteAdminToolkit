@@ -139,9 +139,11 @@ class DataNode(object):
             self.can_vanish = False
 
         else:
-            # here we invoke method that might not work on all
-            # storage systems
             full_path_name = os.path.join(config.UNMERGED_DIR_LOCATION, self.path_name)
+
+            # Here we invoke method that might not work on all storage systems
+            # Check list_folder()
+
             dirs = list_folder(full_path_name, 'subdirs')
             all_files = list_folder(full_path_name, 'files')
 
@@ -149,8 +151,8 @@ class DataNode(object):
                 sub_node = DataNode(self.path_name + '/' + subdir)
                 sub_node.fill()
                 self.sub_nodes.append(sub_node)
-                # get the latest modification start for all files
 
+            # Get the latest modification start for all files
             for file_name in all_files:
                 modtime = get_mtime(full_path_name + '/' + file_name)
                 self.size = self.size + get_file_size(full_path_name + '/' + file_name)
@@ -160,7 +162,7 @@ class DataNode(object):
             self.can_vanish = True
 
             for sub_node in self.sub_nodes:
-                self.nsubnodes += sub_node.nsubnodes + 1
+                self.nsubnodes += sub_node.nsubnodes + 1 # Add one to include the subnode in the loop
                 self.nsubfiles += sub_node.nsubfiles
                 self.size += sub_node.size
 
@@ -173,6 +175,7 @@ class DataNode(object):
             self.nsubfiles += len(all_files)
 
             if self.nsubnodes == 0 and self.nsubfiles == 0:
+                # Check that this time function works for your system as well
                 self.latest = get_mtime(full_path_name)
 
             if (NOW - self.latest) < config.MIN_AGE:
@@ -264,11 +267,13 @@ def get_mtime(name):
 
 def get_file_size(name):
     """
-    Get the site of a file.
+    Get the size of a file.
 
     .. Note::
 
        This can potentially be optimized for different filesystems.
+       There's no real use for this function though besides reporting back the user,
+       so go ahead and return 0 or something if you want to.
 
     :param str name: Name of file
     :returns: File size, in bytes
@@ -291,11 +296,11 @@ def get_protected():
         conn.request('GET', '/cmst2/unified/listProtectedLFN.txt')
         res = conn.getresponse()
         result = json.loads(res.read())
+        protected = result['protected']
     except Exception:
         print 'Cannot read Protected LFNs. Have to stop...'
         exit(1)
 
-    protected = result['protected']
     conn.close()
 
     return protected
@@ -320,7 +325,9 @@ def hadoop_delete(directory):
                           This is not exactly the same as the LFN or PFN.
     """
 
-    # Check if path is still there in case cksum is actually in a different place
+    # Check if path is still there in case checksum is actually in a different place
+    # than we are expecting at the moment.
+
     if os.path.exists(directory):
         command = 'hdfs dfs -rm -r %s' % directory
         print 'Will do:', command
@@ -393,6 +400,7 @@ def do_delete():
                     dcache_delete(deleting)
 
                 else:
+                    # The default, 'posix', goes here
                     print 'About to delete %s' % deleting
                     time.sleep(config.SLEEP_TIME)
                     shutil.rmtree(deleting)
@@ -551,6 +559,8 @@ if __name__ == '__main__':
         main()
 
 else:
+
+    # Some empty lists that we'll populate for tests.
 
     PROTECTED_LIST = []
     ALL_LENGTHS = []
