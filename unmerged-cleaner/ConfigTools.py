@@ -67,8 +67,14 @@ def guess_site():
 
     host = socket.getfqdn()
 
-    # Try mapping directly the domain to the LFN.
+    #
+    # Try mapping directly the domain for the LFN.
     # Feel free to add your domain here.
+    #
+    # If someone is feeling ambitious, they can try to do something clever with SiteDB.
+    # If you create something fully automatic, please share it with Tools & Integration
+    # because we know a number of people that will be interested.
+    #
 
     host_map = {
         'oeaw.ac.at':     'T2_AT_Vienna',
@@ -97,13 +103,27 @@ def guess_site():
 
     return 'T2_US_MIT'
 
+#
+# For developers: there are three steps to adding a properly documented configuration variable.
+#
+# 1. Make sure get_default(variable_name) returns a good default value for the variable.
+#    This can be done by adding a default to the DEFAULTS dictionary, or by adding a special case
+#    to the get_default() function.
+# 2. Make sure the variable is documented inside the dictionary DOCS.
+#    This will cause the documentation to show up in the default configuration generated
+#    the first time ListDeletable.py is run and on our centrally maintained website.
+# 3. Place the variable in the correct location in VAR_ORDER.
+#    This is needed because some variables can depend on others,
+#    so dependencies need to be declared first.
+#    Let's not rely on dict.keys() for that.
+#
 
 # Default values for the configuration are given here:
 DEFAULTS = {
     'LFN_TO_CLEAN':  '/store/unmerged',
     'STORAGE_TYPE':  'posix',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
-    'MIN_AGE':       60 * 60 * 24 * 7,    # Corresponds to one week
+    'MIN_AGE':       60 * 60 * 24 * 7 * 4,    # Corresponds to four weeks
     'WHICH_LIST':    'directories',
     'SLEEP_TIME':    0.5,
 }
@@ -133,7 +153,7 @@ DOCS = {
          'The defaults are ``%s``.' % DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE':
         ('Directories with an age less than this, in seconds, will not be deleted.\n'
-         'The default (``%s``) corresponds to one week.\n'
+         'The default (``%s``) corresponds to fours weeks.\n'
          'Mathematical expressions here are evaluated.' % DEFAULTS['MIN_AGE']),
     'WHICH_LIST':
         ('Determines whether a list of directories or files will be generated.\n'
