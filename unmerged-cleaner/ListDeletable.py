@@ -497,6 +497,11 @@ def main():
 
         dirs_to_delete = []
 
+        tot_upper_dirs = 0
+        tot_dirs = 0
+        tot_files = 0
+        tot_site = 0
+
         for subdir in dirs:
             if subdir in config.DIRS_TO_AVOID:
                 continue
@@ -524,7 +529,15 @@ def main():
                 % (len(list_to_del), num_todelete_dirs, num_todelete_files,
                    todelete_size, subdir)
 
+            tot_upper_dirs += len(list_to_del)
+            tot_dirs += num_todelete_dirs
+            tot_files += num_todelete_files
+            tot_site += todelete_size
+
             dirs_to_delete.extend(list_to_del)
+
+        print "-" * 30
+        print "  %-8d %-8d %-6d %-9d TOTALS" % (tot_upper_dirs, tot_dirs, tot_files, tot_site)
 
         deletion_dir = os.path.dirname(config.DELETION_FILE)
         if not os.path.exists(deletion_dir):
