@@ -124,7 +124,7 @@ DEFAULTS = {
     'STORAGE_TYPE':  'posix',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
     'MIN_AGE':       60 * 60 * 24 * 7 * 2,    # Corresponds to two weeks
-    'WHICH_LIST':    'files',
+    'WHICH_LIST':    'directories',
     'SLEEP_TIME':    0.5,
 }
 
