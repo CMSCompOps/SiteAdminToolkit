@@ -15,30 +15,6 @@ use namespace::autoclean;
 
 App::Rad->run();
 
-sub _fetch_json_page {
-    my ($json_url) = @_;
-    my $browser = WWW::Mechanize->new();
-
-    # download the json page:
-    print "Getting json $json_url\n";
-    $browser->get($json_url);
-    my $content = $browser->content();
-    my $json    = new JSON;
-
-    my $json_text =
-        $json->allow_nonref->utf8->relaxed->escape_slash->loose
-        ->allow_singlequote->allow_barekey->decode($content);
-    my @temp = ();
-    foreach my $dataset ( @{ $json_text->{inputcollections} } ) {
-        push( @temp, $dataset->{inputcollection} );
-    }
-    return ( \@temp );
-
-    # catch crashes:
-    if ($@) {
-        print "[[JSON ERROR]] JSON parser crashed! $@\n";
-    }
-}
 
 sub run {
     
@@ -59,6 +35,31 @@ sub run {
     my $setsize           = 0;
 
     $site_name = $default_site if ( not $site_name );
+
+    sub _fetch_json_page {
+        my ($json_url) = @_;
+        my $browser = WWW::Mechanize->new();
+
+        # download the json page:
+        print "Getting json $json_url\n";
+        $browser->get($json_url);
+        my $content = $browser->content();
+        my $json    = new JSON;
+
+        my $json_text =
+          $json->allow_nonref->utf8->relaxed->escape_slash->loose
+          ->allow_singlequote->allow_barekey->decode($content);
+        my @temp = ();
+        foreach my $dataset ( @{ $json_text->{inputcollections} } ) {
+            push( @temp, $dataset->{inputcollection} );
+        }
+        return ( \@temp );
+
+        # catch crashes:
+        if ($@) {
+            print "[[JSON ERROR]] JSON parser crashed! $@\n";
+        }
+    }
 
     my $date_range =  $rad->options->{'date'} or $rad->options->{'d'};
 
@@ -82,7 +83,7 @@ sub run {
     );
     my $phedex = $phedex_ref->content();
     $phedex =~ s{\A\$VAR\d+\s*=\s*}{};
-    my $phedex_values = eval $phedex;  ## no critic
+    my $phedex_values = eval $phedex;
     for my $block ( @{ $phedex_values->{PHEDEX}->{BLOCK} } ) {
 
         @datasetName = split( /#/, $block->{NAME} );
