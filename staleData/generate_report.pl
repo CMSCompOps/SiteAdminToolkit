@@ -48,7 +48,7 @@ sub default {
     
     # this set the alias from --date to -d and --site to -s
     $rad->getopt( 'date|d=s', 'site|s=s' )
-          or $rad->execute('usage') and return undef;
+          or $rad->execute('usage') and return;
             
     my $phedex_ref        = WWW::Mechanize->new();
     my %datasets          = ();
@@ -83,7 +83,7 @@ sub default {
     );
     my $phedex = $phedex_ref->content();
     $phedex =~ s{\A\$VAR\d+\s*=\s*}{};
-    my $phedex_values = eval $phedex;
+    my $phedex_values = eval $phedex;  ## no critic
     for my $block ( @{ $phedex_values->{PHEDEX}->{BLOCK} } ) {
 
         #               print $block->{NAME}, "\n";

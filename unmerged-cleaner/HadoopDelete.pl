@@ -31,13 +31,13 @@ use strict;
 
 my @remfiles = ();
 my $tfile = $ARGV[0];
-open(IN, "$tfile") || die "$tfile does not exist\n";
-while(<IN>){
+open(my $in_handle, '<', "$tfile") || die "$tfile does not exist\n";
+while(<$in_handle>){
     chomp;
     print $_,"\n";
     @remfiles = (@remfiles, $_);
 }
-close(IN);
+close($in_handle);
 
 foreach my $file (@remfiles){
     unless(-d $file){

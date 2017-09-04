@@ -123,8 +123,8 @@ DEFAULTS = {
     'LFN_TO_CLEAN':  '/store/unmerged',
     'STORAGE_TYPE':  'posix',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
-    'MIN_AGE':       60 * 60 * 24 * 7 * 4,    # Corresponds to four weeks
-    'WHICH_LIST':    'directories',
+    'MIN_AGE':       60 * 60 * 24 * 7 * 2,    # Corresponds to two weeks
+    'WHICH_LIST':    'files',
     'SLEEP_TIME':    0.5,
 }
 

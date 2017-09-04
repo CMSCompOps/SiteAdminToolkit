@@ -148,7 +148,7 @@ class DataNode(object):
             all_files = list_folder(full_path_name, 'files')
 
             for subdir in dirs:
-                sub_node = DataNode(self.path_name + '/' + subdir)
+                sub_node = DataNode(os.path.join(self.path_name, subdir))
                 sub_node.fill()
                 self.sub_nodes.append(sub_node)
 
@@ -178,7 +178,7 @@ class DataNode(object):
                 # Check that this time function works for your system as well
                 self.latest = get_mtime(full_path_name)
 
-            if (NOW - self.latest) < config.MIN_AGE:
+            if (NOW - self.latest) < config.MIN_AGE or lfn_path_name in PROTECTED_UPPER_DIRS:
                 self.can_vanish = False
 
 
@@ -481,6 +481,12 @@ def main():
         filter_protected(get_unmerged_files(), PROTECTED_LIST)
 
     elif config.WHICH_LIST == 'directories':
+        for directory in PROTECTED_LIST:
+            parent = os.path.dirname(directory)
+            while parent and parent != '/':
+                PROTECTED_UPPER_DIRS.add(parent)
+                parent = os.path.dirname(parent)
+
         print "Some statistics about what is going to be deleted"
         print "# Folders  Total    Total  DiskSize  FolderName"
         print "#          Folders  Files  [GB]                "
@@ -550,10 +556,10 @@ if __name__ == '__main__':
         # The list of protected directories to not delete
         PROTECTED_LIST = get_protected()
         PROTECTED_LIST.sort()
+        PROTECTED_UPPER_DIRS = set()
 
         # The lengths of these protected directories for optimization
         ALL_LENGTHS = list(set(len(protected) for protected in PROTECTED_LIST))
-
         ALL_LENGTHS.sort()
 
         main()
