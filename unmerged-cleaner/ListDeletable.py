@@ -148,7 +148,7 @@ class DataNode(object):
             all_files = list_folder(full_path_name, 'files')
 
             for subdir in dirs:
-                sub_node = DataNode(self.path_name + '/' + subdir)
+                sub_node = DataNode(os.path.join(self.path_name, subdir))
                 sub_node.fill()
                 self.sub_nodes.append(sub_node)
 
@@ -178,7 +178,7 @@ class DataNode(object):
                 # Check that this time function works for your system as well
                 self.latest = get_mtime(full_path_name)
 
-            if (NOW - self.latest) < config.MIN_AGE:
+            if (NOW - self.latest) < config.MIN_AGE or lfn_path_name in PROTECTED_UPPER_DIRS:
                 self.can_vanish = False
 
 
@@ -481,6 +481,12 @@ def main():
         filter_protected(get_unmerged_files(), PROTECTED_LIST)
 
     elif config.WHICH_LIST == 'directories':
+        for directory in PROTECTED_LIST:
+            parent = os.path.dirname(directory)
+            while parent and parent != '/':
+                PROTECTED_UPPER_DIRS.add(parent)
+                parent = os.path.dirname(parent)
+
         print "Some statistics about what is going to be deleted"
         print "# Folders  Total    Total  DiskSize  FolderName"
         print "#          Folders  Files  [GB]                "
@@ -490,6 +496,11 @@ def main():
         dirs = list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs')
 
         dirs_to_delete = []
+
+        tot_upper_dirs = 0
+        tot_dirs = 0
+        tot_files = 0
+        tot_site = 0
 
         for subdir in dirs:
             if subdir in config.DIRS_TO_AVOID:
@@ -518,7 +529,15 @@ def main():
                 % (len(list_to_del), num_todelete_dirs, num_todelete_files,
                    todelete_size, subdir)
 
+            tot_upper_dirs += len(list_to_del)
+            tot_dirs += num_todelete_dirs
+            tot_files += num_todelete_files
+            tot_site += todelete_size
+
             dirs_to_delete.extend(list_to_del)
+
+        print "-" * 30
+        print "  %-8d %-8d %-6d %-9d TOTALS" % (tot_upper_dirs, tot_dirs, tot_files, tot_site)
 
         deletion_dir = os.path.dirname(config.DELETION_FILE)
         if not os.path.exists(deletion_dir):
@@ -550,10 +569,10 @@ if __name__ == '__main__':
         # The list of protected directories to not delete
         PROTECTED_LIST = get_protected()
         PROTECTED_LIST.sort()
+        PROTECTED_UPPER_DIRS = set()
 
         # The lengths of these protected directories for optimization
         ALL_LENGTHS = list(set(len(protected) for protected in PROTECTED_LIST))
-
         ALL_LENGTHS.sort()
 
         main()

@@ -123,7 +123,7 @@ DEFAULTS = {
     'LFN_TO_CLEAN':  '/store/unmerged',
     'STORAGE_TYPE':  'posix',
     'DIRS_TO_AVOID': ['SAM', 'logs'],
-    'MIN_AGE':       60 * 60 * 24 * 7 * 4,    # Corresponds to four weeks
+    'MIN_AGE':       60 * 60 * 24 * 7 * 2,    # Corresponds to two weeks
     'WHICH_LIST':    'directories',
     'SLEEP_TIME':    0.5,
 }
@@ -153,7 +153,7 @@ DOCS = {
          'The defaults are ``%s``.' % DEFAULTS['DIRS_TO_AVOID']),
     'MIN_AGE':
         ('Directories with an age less than this, in seconds, will not be deleted.\n'
-         'The default (``%s``) corresponds to fours weeks.\n'
+         'The default (``%s``) corresponds to two weeks.\n'
          'Mathematical expressions here are evaluated.' % DEFAULTS['MIN_AGE']),
     'WHICH_LIST':
         ('Determines whether a list of directories or files will be generated.\n'
