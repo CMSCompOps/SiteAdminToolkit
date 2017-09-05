@@ -64,6 +64,7 @@ import httplib
 import json
 import os
 import time
+import datetime
 import subprocess
 import shutil
 from bisect import bisect_left
@@ -162,7 +163,7 @@ class DataNode(object):
             self.can_vanish = True
 
             for sub_node in self.sub_nodes:
-                self.nsubnodes += sub_node.nsubnodes + 1 # Add one to include the subnode in the loop
+                self.nsubnodes += sub_node.nsubnodes + 1  # Add one to include the subnode in the loop
                 self.nsubfiles += sub_node.nsubfiles
                 self.size += sub_node.size
 
@@ -180,7 +181,6 @@ class DataNode(object):
 
             if (NOW - self.latest) < config.MIN_AGE or lfn_path_name in PROTECTED_UPPER_DIRS:
                 self.can_vanish = False
-
 
     def traverse_tree(self, list_to_del):
         """
@@ -245,8 +245,8 @@ def list_folder(name, opt):
         # Return list of files
         the_filter = os.path.isfile
 
-    return [listing for listing in os.listdir(name) if \
-                the_filter(os.path.join(name, listing))]
+    return [listing for listing in os.listdir(name) if
+            the_filter(os.path.join(name, listing))]
 
 
 def get_mtime(name):
@@ -317,7 +317,7 @@ def lfn_to_pfn(lfn):
     return pfn
 
 
-def hadoop_delete(directory):
+def hadoop_delete(directory, mount_point='/mnt/hadoop'):
     """
     Does the deletion for Hadoop sites.
 
@@ -327,8 +327,7 @@ def hadoop_delete(directory):
 
     # Check if path is still there in case checksum is actually in a different place
     # than we are expecting at the moment.
-
-    if os.path.exists(directory):
+    if os.path.exists("%s%s" % (mount_point, directory)):
         command = 'hdfs dfs -rm -r %s' % directory
         print 'Will do:', command
         time.sleep(config.SLEEP_TIME)
@@ -392,9 +391,9 @@ def do_delete():
 
                 if config.STORAGE_TYPE == 'hadoop':
                     # Hadoop stores also a directory with checksums
-                    hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
+                    hadoop_delete(deleting.replace('/mnt/hadoop', '/cksums'))
                     # Delete the unmerged directory
-                    hadoop_delete(deleting)
+                    hadoop_delete(deleting.replace('/mnt/hadoop', ''))
 
                 elif config.STORAGE_TYPE == 'dcache':
                     dcache_delete(deleting)
@@ -430,6 +429,35 @@ def get_unmerged_files():
     stdout, _ = out.communicate()
     return stdout.decode().split()
 
+def get_unmerged_files_hadoop():
+    """
+    :returns: the old files' PFNs in the unmerged directory
+    :rtype: list
+    """
+
+    older_than_timestamp = int(time.time()) - config.MIN_AGE
+    hdfs_cmd = "hdfs dfs -ls -R {0} | grep -v '^d' | sed '1d;s/  */ /g' | cut -d\  -f6-8".format(
+        config.LFN_TO_CLEAN)
+
+    print 'About to run:'
+    print hdfs_cmd
+
+    out = subprocess.Popen(hdfs_cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, _ = out.communicate()
+    all_Files = stdout.decode().split("\n")
+    unmerged_files = []
+    for fileLine in all_Files:
+        tmpLine = fileLine.split()
+        if not tmpLine:
+            continue
+        fileDate = "%s %s" % (tmpLine[0], tmpLine[1])
+        fileDate = int(time.mktime(datetime.datetime.strptime(fileDate, "%Y-%m-%d %H:%M").timetuple()))
+        if fileDate < older_than_timestamp:
+            unmerged_files.append(fileLine[2])
+    return unmerged_files
+
 
 def filter_protected(unmerged_files, protected):
     """
@@ -440,7 +468,7 @@ def filter_protected(unmerged_files, protected):
     """
 
     print 'Got %i deletion candidates' % len(unmerged_files)
-    print 'Have %i protcted dirs' % len(protected)
+    print 'Have %i protected dirs' % len(protected)
     print 'Have %i avoided dirs' % len(config.DIRS_TO_AVOID)
     n_protect = 0
     n_delete = 0
@@ -462,7 +490,6 @@ def filter_protected(unmerged_files, protected):
                     protect = True
                     break
 
-
             if not protect:
                 deletions.write(unmerged_file + '\n')
                 n_delete += 1
@@ -478,7 +505,10 @@ def main():
     """
 
     if config.WHICH_LIST == 'files':
-        filter_protected(get_unmerged_files(), PROTECTED_LIST)
+        if config.STORAGE_TYPE == 'hadoop':
+            filter_protected(get_unmerged_files_hadoop(), PROTECTED_LIST)
+        else:
+            filter_protected(get_unmerged_files(), PROTECTED_LIST)
 
     elif config.WHICH_LIST == 'directories':
         for directory in PROTECTED_LIST:
@@ -552,10 +582,9 @@ def main():
         print 'The WHICH_LIST parameter in config.py is not valid.'
 
 
-
 # Generate documentation for the options in the configuration file.
-__doc__ %= '\n'.join(['- **%s** - %s' % (var, ConfigTools.DOCS[var].replace('\n', ' ')) \
-                          for var in ConfigTools.VAR_ORDER])
+__doc__ %= '\n'.join(['- **%s** - %s' % (var, ConfigTools.DOCS[var].replace('\n', ' '))
+                      for var in ConfigTools.VAR_ORDER])
 
 NOW = int(time.time())
 
