@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# pylint: disable=redefined-builtin, import-error
+# pylint: disable=redefined-builtin, import-error, anomalous-backslash-in-string
 
 """
 This script is located as :file:`SiteAdminToolkit/unmerged-cleaner/ListDeletable.py`.
@@ -163,7 +163,8 @@ class DataNode(object):
             self.can_vanish = True
 
             for sub_node in self.sub_nodes:
-                self.nsubnodes += sub_node.nsubnodes + 1  # Add one to include the subnode in the loop
+                # Add one to include the subnode in the loop
+                self.nsubnodes += sub_node.nsubnodes + 1
                 self.nsubfiles += sub_node.nsubfiles
                 self.size += sub_node.size
 
@@ -323,11 +324,12 @@ def hadoop_delete(directory, mount_point='/mnt/hadoop'):
 
     :param str directory: The directory name for hdfs to delete.
                           This is not exactly the same as the LFN or PFN.
+    :param str mount_point: The location of the hadoop mount point.
     """
 
     # Check if path is still there in case checksum is actually in a different place
     # than we are expecting at the moment.
-    if os.path.exists("%s%s" % (mount_point, directory)):
+    if os.path.exists(os.path.join(mount_point, directory)):
         command = 'hdfs dfs -rm -r %s' % directory
         print 'Will do:', command
         time.sleep(config.SLEEP_TIME)
@@ -446,16 +448,20 @@ def get_unmerged_files_hadoop():
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     stdout, _ = out.communicate()
-    all_Files = stdout.decode().split("\n")
+    all_files = stdout.decode().split("\n")
     unmerged_files = []
-    for fileLine in all_Files:
-        tmpLine = fileLine.split()
-        if not tmpLine:
+    for file_line in all_files:
+        tmp_line = file_line.split()
+        if not tmp_line:
             continue
-        fileDate = "%s %s" % (tmpLine[0], tmpLine[1])
-        fileDate = int(time.mktime(datetime.datetime.strptime(fileDate, "%Y-%m-%d %H:%M").timetuple()))
-        if fileDate < older_than_timestamp:
-            unmerged_files.append(fileLine[2])
+        file_date = "%s %s" % (tmp_line[0], tmp_line[1])
+        file_date = int(
+            time.mktime(
+                datetime.datetime.strptime(
+                    file_date, "%Y-%m-%d %H:%M").timetuple()))
+
+        if file_date < older_than_timestamp:
+            unmerged_files.append(file_line[2])
     return unmerged_files
 
 
@@ -505,10 +511,11 @@ def main():
     """
 
     if config.WHICH_LIST == 'files':
-        if config.STORAGE_TYPE == 'hadoop':
-            filter_protected(get_unmerged_files_hadoop(), PROTECTED_LIST)
-        else:
-            filter_protected(get_unmerged_files(), PROTECTED_LIST)
+        unmerged_files = get_unmerged_files_hadoop() \
+            if config.STORAGE_TYPE == 'hadoop' else \
+            get_unmerged_files()
+
+        filter_protected(unmerged_files, PROTECTED_LIST)
 
     elif config.WHICH_LIST == 'directories':
         for directory in PROTECTED_LIST:
@@ -523,7 +530,8 @@ def main():
 
         # Get the location of the PFN and the subdirectories there
 
-        dirs = list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs')
+        dirs = [subdir for subdir in list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs') \
+                    if subdir not in config.DIRS_TO_AVOID]
 
         dirs_to_delete = []
 
@@ -533,9 +541,6 @@ def main():
         tot_site = 0
 
         for subdir in dirs:
-            if subdir in config.DIRS_TO_AVOID:
-                continue
-
             top_node = DataNode(subdir)
             top_node.fill()
 
@@ -574,8 +579,13 @@ def main():
             os.makedirs(deletion_dir)
 
         del_file = open(config.DELETION_FILE, 'w')
-        for item in dirs_to_delete:
-            del_file.write(os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) + '\n')
+
+        del_file.write(
+            '\n'.join(
+                [os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) \
+                     for item in dirs_to_delete]
+                ) + '\n')
+
         del_file.close()
 
     else:
