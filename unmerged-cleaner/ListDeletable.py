@@ -162,7 +162,8 @@ class DataNode(object):
             self.can_vanish = True
 
             for sub_node in self.sub_nodes:
-                self.nsubnodes += sub_node.nsubnodes + 1 # Add one to include the subnode in the loop
+                # Add one to include the subnode in the loop
+                self.nsubnodes += sub_node.nsubnodes + 1
                 self.nsubfiles += sub_node.nsubfiles
                 self.size += sub_node.size
 
@@ -461,7 +462,6 @@ def filter_protected(unmerged_files, protected):
                 if pfn in unmerged_file:
                     protect = True
                     break
-
 
             if not protect:
                 deletions.write(unmerged_file + '\n')

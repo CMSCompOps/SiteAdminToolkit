@@ -158,7 +158,8 @@ DOCS = {
     'WHICH_LIST':
         ('Determines whether a list of directories or files will be generated.\n'
          'These lists will be in PFN format. Possible values are\n'
-         '``\'directories\'`` or ``\'files\'``. The default is ``\'%s\'``.' % DEFAULTS['WHICH_LIST']),
+         '``\'directories\'`` or ``\'files\'``. '
+         'The default is ``\'%s\'``.' % DEFAULTS['WHICH_LIST']),
     'SLEEP_TIME':
         ('This is the number of seconds between each deletion of a directory or file.\n'
          'The sleep avoids overloading the system and '
