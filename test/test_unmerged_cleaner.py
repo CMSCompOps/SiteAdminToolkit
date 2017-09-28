@@ -43,6 +43,7 @@ protected_list = ['protected1', 'dir/that/is/protected', 'delete/except/protecte
 ListDeletable.PROTECTED_LIST = [os.path.join(ListDeletable.config.LFN_TO_CLEAN, protected) \
                                     for protected in protected_list]
 ListDeletable.PROTECTED_LIST.sort()
+ListDeletable.PROTECTED_UPPER_DIRS = set()
 ListDeletable.ALL_LENGTHS = list(set(
         len(protected) for protected in ListDeletable.PROTECTED_LIST))
 ListDeletable.ALL_LENGTHS.sort()
@@ -189,6 +190,30 @@ class TestUnmergedFileChecks(unittest.TestCase):
                 self.setUp()
 
                 self.do_deletion(method)
+
+    def test_directory_reduction(self):
+        test_to_delete = 'dir/to/delete/test_file.root'
+
+        self.tmpdir.write(test_to_delete,
+                          bytearray(os.urandom(1024)))
+
+        print 'Waiting for some time.'
+
+        time.sleep(5)
+        cutoff_time = int(time.time())
+        time.sleep(5)
+
+        ListDeletable.config.WHICH_LIST = 'directories'
+        ListDeletable.config.MIN_AGE = int(time.time() - cutoff_time)
+        ListDeletable.NOW = int(time.time())
+        ListDeletable.main()
+
+        ListDeletable.do_delete()
+
+        self.assertFalse(os.path.exists(self.tmpdir.getpath(test_to_delete)))
+        self.assertFalse(os.path.exists(self.tmpdir.getpath(os.path.dirname(test_to_delete))))
+        self.assertTrue(os.path.exists(self.tmpdir.getpath('dir')))
+
 
 if __name__ == '__main__':
     unittest.main()

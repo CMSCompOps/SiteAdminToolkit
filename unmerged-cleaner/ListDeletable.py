@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# pylint: disable=redefined-builtin, import-error
+# pylint: disable=redefined-builtin, import-error, anomalous-backslash-in-string
 
 """
 This script is located as :file:`SiteAdminToolkit/unmerged-cleaner/ListDeletable.py`.
@@ -64,6 +64,7 @@ import httplib
 import json
 import os
 import time
+import datetime
 import subprocess
 import shutil
 from bisect import bisect_left
@@ -148,7 +149,7 @@ class DataNode(object):
             all_files = list_folder(full_path_name, 'files')
 
             for subdir in dirs:
-                sub_node = DataNode(self.path_name + '/' + subdir)
+                sub_node = DataNode(os.path.join(self.path_name, subdir))
                 sub_node.fill()
                 self.sub_nodes.append(sub_node)
 
@@ -179,9 +180,8 @@ class DataNode(object):
                 # Check that this time function works for your system as well
                 self.latest = get_mtime(full_path_name)
 
-            if (NOW - self.latest) < config.MIN_AGE:
+            if (NOW - self.latest) < config.MIN_AGE or lfn_path_name in PROTECTED_UPPER_DIRS:
                 self.can_vanish = False
-
 
     def traverse_tree(self, list_to_del):
         """
@@ -246,8 +246,8 @@ def list_folder(name, opt):
         # Return list of files
         the_filter = os.path.isfile
 
-    return [listing for listing in os.listdir(name) if \
-                the_filter(os.path.join(name, listing))]
+    return [listing for listing in os.listdir(name) if
+            the_filter(os.path.join(name, listing))]
 
 
 def get_mtime(name):
@@ -318,18 +318,18 @@ def lfn_to_pfn(lfn):
     return pfn
 
 
-def hadoop_delete(directory):
+def hadoop_delete(directory, mount_point='/mnt/hadoop'):
     """
     Does the deletion for Hadoop sites.
 
     :param str directory: The directory name for hdfs to delete.
                           This is not exactly the same as the LFN or PFN.
+    :param str mount_point: The location of the hadoop mount point.
     """
 
     # Check if path is still there in case checksum is actually in a different place
     # than we are expecting at the moment.
-
-    if os.path.exists(directory):
+    if os.path.exists(os.path.join(mount_point, directory)):
         command = 'hdfs dfs -rm -r %s' % directory
         print 'Will do:', command
         time.sleep(config.SLEEP_TIME)
@@ -393,9 +393,9 @@ def do_delete():
 
                 if config.STORAGE_TYPE == 'hadoop':
                     # Hadoop stores also a directory with checksums
-                    hadoop_delete(deleting.replace('/mnt/hadoop', '/mnt/hadoop/cksums'))
+                    hadoop_delete(deleting.replace('/mnt/hadoop', '/cksums'))
                     # Delete the unmerged directory
-                    hadoop_delete(deleting)
+                    hadoop_delete(deleting.replace('/mnt/hadoop', ''))
 
                 elif config.STORAGE_TYPE == 'dcache':
                     dcache_delete(deleting)
@@ -431,6 +431,39 @@ def get_unmerged_files():
     stdout, _ = out.communicate()
     return stdout.decode().split()
 
+def get_unmerged_files_hadoop():
+    """
+    :returns: the old files' PFNs in the unmerged directory
+    :rtype: list
+    """
+
+    older_than_timestamp = int(time.time()) - config.MIN_AGE
+    hdfs_cmd = "hdfs dfs -ls -R {0} | grep -v '^d' | sed '1d;s/  */ /g' | cut -d\  -f6-8".format(
+        config.LFN_TO_CLEAN)
+
+    print 'About to run:'
+    print hdfs_cmd
+
+    out = subprocess.Popen(hdfs_cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    stdout, _ = out.communicate()
+    all_Files = stdout.decode().split("\n")
+    unmerged_files = []
+    for fileLine in all_Files:
+        tmpLine = fileLine.split()
+        if not tmpLine:
+            continue
+        file_date = "%s %s" % (tmpLine[0], tmpLine[1])
+        file_date = int(
+            time.mktime(
+                datetime.datetime.strptime(
+                    file_date, "%Y-%m-%d %H:%M").timetuple()))
+
+        if fileDate < older_than_timestamp:
+            unmerged_files.append(fileLine[2])
+    return unmerged_files
+
 
 def filter_protected(unmerged_files, protected):
     """
@@ -441,7 +474,7 @@ def filter_protected(unmerged_files, protected):
     """
 
     print 'Got %i deletion candidates' % len(unmerged_files)
-    print 'Have %i protcted dirs' % len(protected)
+    print 'Have %i protected dirs' % len(protected)
     print 'Have %i avoided dirs' % len(config.DIRS_TO_AVOID)
     n_protect = 0
     n_delete = 0
@@ -478,9 +511,19 @@ def main():
     """
 
     if config.WHICH_LIST == 'files':
-        filter_protected(get_unmerged_files(), PROTECTED_LIST)
+        unmerged_files = get_unmerged_files_hadoop() \
+            if config.STORAGE_TYPE == 'hadoop' else \
+            get_unmerged_files()
+
+        filter_protected(unmerged_files, PROTECTED_LIST)
 
     elif config.WHICH_LIST == 'directories':
+        for directory in PROTECTED_LIST:
+            parent = os.path.dirname(directory)
+            while parent and parent != '/':
+                PROTECTED_UPPER_DIRS.add(parent)
+                parent = os.path.dirname(parent)
+
         print "Some statistics about what is going to be deleted"
         print "# Folders  Total    Total  DiskSize  FolderName"
         print "#          Folders  Files  [GB]                "
@@ -490,6 +533,11 @@ def main():
         dirs = list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs')
 
         dirs_to_delete = []
+
+        tot_upper_dirs = 0
+        tot_dirs = 0
+        tot_files = 0
+        tot_site = 0
 
         for subdir in dirs:
             if subdir in config.DIRS_TO_AVOID:
@@ -518,7 +566,15 @@ def main():
                 % (len(list_to_del), num_todelete_dirs, num_todelete_files,
                    todelete_size, subdir)
 
+            tot_upper_dirs += len(list_to_del)
+            tot_dirs += num_todelete_dirs
+            tot_files += num_todelete_files
+            tot_site += todelete_size
+
             dirs_to_delete.extend(list_to_del)
+
+        print "-" * 30
+        print "  %-8d %-8d %-6d %-9d TOTALS" % (tot_upper_dirs, tot_dirs, tot_files, tot_site)
 
         deletion_dir = os.path.dirname(config.DELETION_FILE)
         if not os.path.exists(deletion_dir):
@@ -533,10 +589,9 @@ def main():
         print 'The WHICH_LIST parameter in config.py is not valid.'
 
 
-
 # Generate documentation for the options in the configuration file.
-__doc__ %= '\n'.join(['- **%s** - %s' % (var, ConfigTools.DOCS[var].replace('\n', ' ')) \
-                          for var in ConfigTools.VAR_ORDER])
+__doc__ %= '\n'.join(['- **%s** - %s' % (var, ConfigTools.DOCS[var].replace('\n', ' '))
+                      for var in ConfigTools.VAR_ORDER])
 
 NOW = int(time.time())
 
@@ -550,10 +605,10 @@ if __name__ == '__main__':
         # The list of protected directories to not delete
         PROTECTED_LIST = get_protected()
         PROTECTED_LIST.sort()
+        PROTECTED_UPPER_DIRS = set()
 
         # The lengths of these protected directories for optimization
         ALL_LENGTHS = list(set(len(protected) for protected in PROTECTED_LIST))
-
         ALL_LENGTHS.sort()
 
         main()
