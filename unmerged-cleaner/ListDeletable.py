@@ -448,20 +448,20 @@ def get_unmerged_files_hadoop():
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     stdout, _ = out.communicate()
-    all_Files = stdout.decode().split("\n")
+    all_files = stdout.decode().split("\n")
     unmerged_files = []
-    for fileLine in all_Files:
-        tmpLine = fileLine.split()
-        if not tmpLine:
+    for file_line in all_files:
+        tmp_line = file_line.split()
+        if not tmp_line:
             continue
-        file_date = "%s %s" % (tmpLine[0], tmpLine[1])
+        file_date = "%s %s" % (tmp_line[0], tmp_line[1])
         file_date = int(
             time.mktime(
                 datetime.datetime.strptime(
                     file_date, "%Y-%m-%d %H:%M").timetuple()))
 
-        if fileDate < older_than_timestamp:
-            unmerged_files.append(fileLine[2])
+        if file_date < older_than_timestamp:
+            unmerged_files.append(file_line[2])
     return unmerged_files
 
 
@@ -530,7 +530,8 @@ def main():
 
         # Get the location of the PFN and the subdirectories there
 
-        dirs = list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs')
+        dirs = [subdir for subdir in list_folder(config.UNMERGED_DIR_LOCATION, 'subdirs') \
+                    if subdir not in config.DIRS_TO_AVOID]
 
         dirs_to_delete = []
 
@@ -540,9 +541,6 @@ def main():
         tot_site = 0
 
         for subdir in dirs:
-            if subdir in config.DIRS_TO_AVOID:
-                continue
-
             top_node = DataNode(subdir)
             top_node.fill()
 
@@ -581,8 +579,13 @@ def main():
             os.makedirs(deletion_dir)
 
         del_file = open(config.DELETION_FILE, 'w')
-        for item in dirs_to_delete:
-            del_file.write(os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) + '\n')
+
+        del_file.write(
+            '\n'.join(
+                [os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) \
+                     for item in dirs_to_delete]
+                ) + '\n')
+
         del_file.close()
 
     else:
