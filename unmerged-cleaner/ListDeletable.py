@@ -329,7 +329,7 @@ def hadoop_delete(directory, mount_point='/mnt/hadoop'):
 
     # Check if path is still there in case checksum is actually in a different place
     # than we are expecting at the moment.
-    if os.path.exists(os.path.join(mount_point, directory)):
+    if os.path.exists(os.path.normpath(os.path.sep.join([mount_point, directory]))):
         command = 'hdfs dfs -rm -r %s' % directory
         print 'Will do:', command
         time.sleep(config.SLEEP_TIME)
