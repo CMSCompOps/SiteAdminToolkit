@@ -481,6 +481,7 @@ def filter_protected(unmerged_files, protected):
     :param list protected: the list of protected LFNs.
     :raises SuspiciousConditions: If the beginning of the file name does not match the
                                   configured location of ``/store/unmerged``
+                                  or if there is a partial match with a protected LFN
     """
 
     print 'Got %i deletion candidates' % len(unmerged_files)
@@ -500,9 +501,15 @@ def filter_protected(unmerged_files, protected):
 
         for lfn in protected:
             pfn = lfn_to_pfn(lfn)
-            if pfn in unmerged_file:
+            if unmerged_file.startswith(pfn):
                 protect = True
                 break
+            elif lfn in unmerged_file:
+                raise SuspiciousConditions(
+                    '\nFile %s\nhas partial match to LFN %s,\n'
+                    'but LFN mapped to %s\nCheck your configuration file' %
+                    (unmerged_file, lfn, pfn))
+
 
         for root_dir in config.DIRS_TO_AVOID:
             pfn = os.path.join(config.UNMERGED_DIR_LOCATION, root_dir)
