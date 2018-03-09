@@ -220,8 +220,7 @@ class TestStartingConditions(unittest.TestCase):
     def test_no_protected(self):
         protected = ListDeletable.PROTECTED_LIST
         ListDeletable.PROTECTED_LIST = []
-        with self.assertRaises(ListDeletable.SuspiciousStartingConditions):
-            ListDeletable.main()
+        self.assertRaises(ListDeletable.SuspiciousStartingConditions, ListDeletable.main)
 
         ListDeletable.PROTECTED_LIST = protected
 
@@ -234,8 +233,7 @@ class TestStartingConditions(unittest.TestCase):
 
         self.assertFalse(ListDeletable.config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'))
 
-        with self.assertRaises(ListDeletable.SuspiciousStartingConditions):
-            ListDeletable.main()
+        self.assertRaises(ListDeletable.SuspiciousStartingConditions, ListDeletable.main)
 
         ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged
 

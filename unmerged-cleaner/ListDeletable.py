@@ -523,7 +523,8 @@ def main():
         raise SuspiciousStartingConditions(
             '\n\'/store/unmerged\' not at the end of your PFN path: %s\n'
             'This tool replaces the \'/store/unmerged\' part of the LFN with your PFN path.\n'
-            '(So it will expect \'/store/unmerged/protected/dir\' at \'%s\')'
+            '(So it will expect \'/store/unmerged/protected/dir\' at \'%s\')\n'
+            'If that is intended, please modify the beginning of this script\'s main() function.'
             % (config.UNMERGED_DIR_LOCATION, lfn_to_pfn('/store/unmerged/protected/dir')))
 
     # Expect protected LFN list from Unified
