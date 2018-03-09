@@ -16,7 +16,7 @@ if len(sys.argv) > 1:
     UNMERGED_DIR_LOCATION = os.path.abspath(sys.argv.pop(1))
 else:
     UNMERGED_DIR_LOCATION = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'unmerged')
+        os.path.abspath(os.path.dirname(__file__)), 'store/unmerged')
 
 if len(sys.argv) == 1:
     sys.argv.append('posix')

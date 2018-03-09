@@ -215,5 +215,30 @@ class TestUnmergedFileChecks(unittest.TestCase):
         self.assertTrue(os.path.exists(self.tmpdir.getpath('dir')))
 
 
+class TestStartingConditions(unittest.TestCase):
+
+    def test_no_protected(self):
+        protected = ListDeletable.PROTECTED_LIST
+        ListDeletable.PROTECTED_LIST = []
+        with self.assertRaises(ListDeletable.SuspiciousStartingConditions):
+            ListDeletable.main()
+
+        ListDeletable.PROTECTED_LIST = protected
+
+    def test_no_unmerged_pfn(self):
+        self.assertTrue(ListDeletable.config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'))
+
+        unmerged = ListDeletable.config.UNMERGED_DIR_LOCATION
+        ListDeletable.config.UNMERGED_DIR_LOCATION = '/'.join(
+            ListDeletable.config.UNMERGED_DIR_LOCATION.split('/')[:-2])
+
+        self.assertFalse(ListDeletable.config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'))
+
+        with self.assertRaises(ListDeletable.SuspiciousStartingConditions):
+            ListDeletable.main()
+
+        ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# pylint: disable=redefined-builtin, import-error, anomalous-backslash-in-string
+# pylint: disable=redefined-builtin, import-error, anomalous-backslash-in-string, too-complex
 
 """
 This script is located as :file:`SiteAdminToolkit/unmerged-cleaner/ListDeletable.py`.
@@ -105,6 +105,14 @@ except ImportError:
     print 'Please correct the default values to match your site'
     print 'and run this script again.'
     exit()
+
+
+class SuspiciousStartingConditions(Exception):
+    """
+    An exception for catching anticipated configuration an tool problems.
+    """
+    pass
+
 
 class DataNode(object):
     """
@@ -510,6 +518,21 @@ def main():
     Does the full listing for the site given in the :file:`config.py` file.
     """
 
+    # Perform some checks of configuration file
+    if not config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'):
+        raise SuspiciousStartingConditions(
+            '\n\'/store/unmerged\' not at the end of your PFN path: %s\n'
+            'This tool replaces the \'/store/unmerged\' part of the LFN with your PFN path.\n'
+            '(So it will expect \'/store/unmerged/protected/dir\' at \'%s\')'
+            % (config.UNMERGED_DIR_LOCATION, lfn_to_pfn('/store/unmerged/protected/dir')))
+
+    # Expect protected LFN list from Unified
+    if not PROTECTED_LIST:
+        raise SuspiciousStartingConditions(
+            '\nNo directories are protected.\n'
+            'Check https://cmst2.web.cern.ch/cmst2/unified/listProtectedLFN.txt')
+
+    # Start checks
     if config.WHICH_LIST == 'files':
         unmerged_files = get_unmerged_files_hadoop() \
             if config.STORAGE_TYPE == 'hadoop' else \
@@ -578,15 +601,12 @@ def main():
         if not os.path.exists(deletion_dir):
             os.makedirs(deletion_dir)
 
-        del_file = open(config.DELETION_FILE, 'w')
-
-        del_file.write(
-            '\n'.join(
-                [os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) \
-                     for item in dirs_to_delete]
-                ) + '\n')
-
-        del_file.close()
+        with open(config.DELETION_FILE, 'w') as del_file:
+            del_file.write(
+                '\n'.join(
+                    [os.path.join(config.UNMERGED_DIR_LOCATION, item.path_name) \
+                         for item in dirs_to_delete]
+                    ) + '\n')
 
     else:
         print 'The WHICH_LIST parameter in config.py is not valid.'
