@@ -153,16 +153,5 @@ The unmerged cleaner also makes use of the local module defined in ``ConfigTools
 .. automodule:: ConfigTools
    :members:
 
-SiteAdminToolkit Forks' Build Statuses
---------------------------------------
-
-If you have a fork with automated build tests set up
-(see :ref:`tests-ref`), then feel free to add your badge here for easy viewing.
-
-dabercro: |build-dabercro|
-
-.. |build-dabercro| image:: https://travis-ci.org/dabercro/SiteAdminToolkit.svg?branch=master
-    :target: https://travis-ci.org/dabercro/SiteAdminToolkit
-
 .. |build| image:: https://travis-ci.org/CMSCompOps/SiteAdminToolkit.svg?branch=master
     :target: https://travis-ci.org/CMSCompOps/SiteAdminToolkit
