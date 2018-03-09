@@ -488,34 +488,36 @@ def filter_protected(unmerged_files, protected):
     print 'Have %i avoided dirs' % len(config.DIRS_TO_AVOID)
     n_protect = 0
     n_delete = 0
+    output = []
+
+    for unmerged_file in unmerged_files:
+        protect = False
+
+        if not unmerged_file.startswith(config.UNMERGED_DIR_LOCATION):
+            raise SuspiciousConditions(
+                '\nFile %s\nis not in your configured unmerged location:\n%s' %
+                (unmerged_file, config.UNMERGED_DIR_LOCATION))
+
+        for lfn in protected:
+            pfn = lfn_to_pfn(lfn)
+            if pfn in unmerged_file:
+                protect = True
+                break
+
+        for root_dir in config.DIRS_TO_AVOID:
+            pfn = os.path.join(config.UNMERGED_DIR_LOCATION, root_dir)
+            if pfn in unmerged_file:
+                protect = True
+                break
+
+        if not protect:
+            output.append(unmerged_file)
+            n_delete += 1
+        else:
+            n_protect += 1
 
     with open(config.DELETION_FILE, 'w') as deletions:
-
-        for unmerged_file in unmerged_files:
-            protect = False
-
-            if not unmerged_file.startswith(config.UNMERGED_DIR_LOCATION):
-                raise SuspiciousConditions(
-                    '\nFile %s\nis not in your configured unmerged location:\n%s' %
-                    (unmerged_file, config.UNMERGED_DIR_LOCATION))
-
-            for lfn in protected:
-                pfn = lfn_to_pfn(lfn)
-                if pfn in unmerged_file:
-                    protect = True
-                    break
-
-            for root_dir in config.DIRS_TO_AVOID:
-                pfn = os.path.join(config.UNMERGED_DIR_LOCATION, root_dir)
-                if pfn in unmerged_file:
-                    protect = True
-                    break
-
-            if not protect:
-                deletions.write(unmerged_file + '\n')
-                n_delete += 1
-            else:
-                n_protect += 1
+        deletions.write('\n'.join(output))
 
     print 'Number to delete: %i,\nNumber protected/avoided: %i' % (n_delete, n_protect)
 
