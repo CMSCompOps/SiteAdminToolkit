@@ -107,7 +107,7 @@ except ImportError:
     exit()
 
 
-class SuspiciousStartingConditions(Exception):
+class SuspiciousConditions(Exception):
     """
     An exception for catching anticipated configuration an tool problems.
     """
@@ -479,6 +479,8 @@ def filter_protected(unmerged_files, protected):
 
     :param list unmerged_files: the list of files to check and delete, if unprotected.
     :param list protected: the list of protected LFNs.
+    :raises SuspiciousConditions: If the beginning of the file name does not match the
+                                  configured location of ``/store/unmerged``
     """
 
     print 'Got %i deletion candidates' % len(unmerged_files)
@@ -491,6 +493,11 @@ def filter_protected(unmerged_files, protected):
 
         for unmerged_file in unmerged_files:
             protect = False
+
+            if not unmerged_file.startswith(config.UNMERGED_DIR_LOCATION):
+                raise SuspiciousConditions(
+                    '\nFile %s\nis not in your configured unmerged location:\n%s' %
+                    (unmerged_file, config.UNMERGED_DIR_LOCATION))
 
             for lfn in protected:
                 pfn = lfn_to_pfn(lfn)
@@ -520,7 +527,7 @@ def main():
 
     # Perform some checks of configuration file
     if not config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'):
-        raise SuspiciousStartingConditions(
+        raise SuspiciousConditions(
             '\n\'/store/unmerged\' not at the end of your PFN path: %s\n'
             'This tool replaces the \'/store/unmerged\' part of the LFN with your PFN path.\n'
             '(So it will expect \'/store/unmerged/protected/dir\' at \'%s\')\n'
@@ -529,7 +536,7 @@ def main():
 
     # Expect protected LFN list from Unified
     if not PROTECTED_LIST:
-        raise SuspiciousStartingConditions(
+        raise SuspiciousConditions(
             '\nNo directories are protected.\n'
             'Check https://cmst2.web.cern.ch/cmst2/unified/listProtectedLFN.txt')
 
