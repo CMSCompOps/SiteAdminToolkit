@@ -501,7 +501,7 @@ def filter_protected(unmerged_files, protected):
 
         for lfn in protected:
             pfn = lfn_to_pfn(lfn)
-            if unmerged_file.startswith(pfn):
+            if pfn in unmerged_file:
                 protect = True
                 break
             elif lfn in unmerged_file:
