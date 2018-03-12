@@ -215,5 +215,38 @@ class TestUnmergedFileChecks(unittest.TestCase):
         self.assertTrue(os.path.exists(self.tmpdir.getpath('dir')))
 
 
+class TestConditions(unittest.TestCase):
+
+    def test_no_protected(self):
+        protected = ListDeletable.PROTECTED_LIST
+        ListDeletable.PROTECTED_LIST = []
+        self.assertRaises(ListDeletable.SuspiciousConditions, ListDeletable.main)
+
+        ListDeletable.PROTECTED_LIST = protected
+
+    def test_no_unmerged_pfn(self):
+        self.assertTrue(ListDeletable.config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'))
+
+        unmerged = ListDeletable.config.UNMERGED_DIR_LOCATION
+        ListDeletable.config.UNMERGED_DIR_LOCATION = '/'.join(
+            ListDeletable.config.UNMERGED_DIR_LOCATION.split('/')[:-2])
+
+        self.assertFalse(ListDeletable.config.UNMERGED_DIR_LOCATION.endswith('/store/unmerged'))
+
+        self.assertRaises(ListDeletable.SuspiciousConditions, ListDeletable.main)
+
+        ListDeletable.config.UNMERGED_DIR_LOCATION = unmerged
+
+    def test_bad_file_start(self):
+        self.assertRaises(ListDeletable.SuspiciousConditions, ListDeletable.filter_protected,
+                          [os.path.join(ListDeletable.config.UNMERGED_DIR_LOCATION.replace('/store/', '/disk/store/'),
+                                        'example/file/location.root')], [])
+
+    def test_partial_match(self):
+        self.assertRaises(ListDeletable.SuspiciousConditions, ListDeletable.filter_protected,
+                          [os.path.join(ListDeletable.config.UNMERGED_DIR_LOCATION, 'store/unmerged/protected/file.root')],
+                          ['/store/unmerged/protected/file.root'])
+
+
 if __name__ == '__main__':
     unittest.main()
